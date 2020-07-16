@@ -1,7 +1,7 @@
 
 import FWCore.ParameterSet.VarParsing as VarParsing
 options = VarParsing.VarParsing ('analysis')
-from GenStudy.Dimuon.mcCmdLineOptions_cfi import registerDefaultMCOptions
+from mcCmdLineOptions_cfi import registerDefaultMCOptions
 registerDefaultMCOptions(options)
 options.register ('zPrimeModel',
                   "zPrimeSSM",
@@ -18,7 +18,6 @@ options.parseArguments()
 
 import FWCore.ParameterSet.Config as cms
 
-
 process = cms.Process('GEN')
 
 # import of standard configurations
@@ -28,7 +27,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
-process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
+#process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 process.load('Configuration.StandardSequences.Generator_cff')
 process.load('IOMC.EventVertexGenerators.VtxSmearedNominalCollision2015_cfi')
 process.load('GeneratorInterface.Core.genFilterSummary_cff')
@@ -41,7 +40,6 @@ process.MessageLogger.cerr.FwkReport = cms.untracked.PSet(
 process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(options.maxEvents)
 )
-
 # Input source
 process.source = cms.Source("EmptySource")
 
@@ -87,9 +85,9 @@ process.generator = cms.EDFilter("Pythia8GeneratorFilter",
                         'ParticleDecays:tauMax = 10',
                         'Tune:pp 5',
                         'Tune:ee 3',
- 			'WeakSingleBoson:ffbar2ffbar(s:gmZ)= %s'%(isDY),
-                        'ContactInteractions:QCffbar2eebar = %s'%(isCIee),
-                        'ContactInteractions:QCffbar2mumubar = %s'%(isCImumu),
+ 			#'WeakSingleBoson:ffbar2ffbar(s:gmZ)= %s'%(isDY),
+                        #'ContactInteractions:QCffbar2eebar = %s'%(isCIee),
+                        #'ContactInteractions:QCffbar2mumubar = %s'%(isCImumu),
                         '23:onMode = off',
                         '23:onIfAny = '+str(options.pdgId),
 			'PartonLevel:MPI = '+str(options.ULE),
@@ -99,11 +97,88 @@ process.generator = cms.EDFilter("Pythia8GeneratorFilter",
                         'PhaseSpace:mHatMin = '+str(options.minMass),
                         'PhaseSpace:mHatMax = '+str(options.maxMass),
 			'PhaseSpace:pTHatMax = '+str(options.pTMax),
-			'ContactInteractions:etaLL = '+str(options.helicityLL),
-			'ContactInteractions:etaLR = '+str(options.helicityLR),
-#UNCOMMENT ME FOR RL			'ContactInteractions:etaRL = '+str(options.helicityRL),
-			'ContactInteractions:etaRR = '+str(options.helicityRR),
-			'ContactInteractions:Lambda = '+str(options.Lambda),
+			#'ContactInteractions:etaLL = '+str(options.helicityLL),
+			#'ContactInteractions:etaLR = '+str(options.helicityLR),
+			#'ContactInteractions:etaRL = '+str(options.helicityRL),
+			#'ContactInteractions:etaRR = '+str(options.helicityRR),
+			#'ContactInteractions:Lambda = '+str(options.Lambda),
+                        'SUSY:all = on',
+                        #'HiddenValley:all = on',
+                        #'SUSY:qqbar2squarkantisquark = on',
+                        #'SUSY:idA = 1000006',
+                        'SLHA:readFrom = 2',
+                        'SLHA:file = sps1aWithDecays.spc',
+                        #'HiddenValley:all',
+
+                        '4900001:m0 = 6.5',
+                        '4900002:m0 = 0.1',
+                        '4900003:m0 = 4.5',
+                        '4900004:m0 = 2',
+
+                        '4900001:spinType = 1',
+                        '4900002:spinType = 1',
+                        '4900003:spinType = 1',
+                        '4900004:spinType = 2',
+
+                        '4900001:chargeType = 0',
+                        '4900002:chargeType = 0',
+                        '4900003:chargeType = 0',
+                        '4900004:chargeType = 0',
+
+                        '4900001:colType = 0',
+                        '4900002:colType = 0',
+                        '4900003:colType = 0',
+                        '4900004:colType = 0',
+
+                        '4900001:name = darkPseudoScalar',
+                        '4900002:name = darkLightHiggs',
+                        '4900003:name = darkHeavyHiggs',
+                        '4900004:name = darkFermion',
+
+                        '4900001:antiname = darkPseudoScalarBar',
+                        '4900002:antiname = darkLightHiggsBar',
+                        '4900003:antiname = darkHeavyHiggsBar',
+                        '4900004:antiname = darkFermionBar',
+
+		
+                        '4900005:m0 = 1000000',
+                        '4900006:m0 = 1000000',
+                        '4900011:m0 = 1000000',
+                        '4900012:m0 = 1000000',
+                        '4900013:m0 = 1000000',
+                        '4900014:m0 = 1000000',
+                        '4900015:m0 = 1000000',
+                        '4900016:m0 = 1000000',
+                        '4900021:m0 = 1000000',
+                        '4900023:m0 = 1000000',
+                        '4900101:m0 = 1000000',
+                        '4900111:m0 = 1000000',
+                        '4900113:m0 = 1000000',
+                        '4900211:m0 = 1000000',
+                        '4900213:m0 = 1000000',
+                        '4900991:m0 = 1000000',	
+		
+		
+		
+		
+		
+                        '4900022:mayDecay = true',
+                        '1000022:mayDecay = true',
+                        '4900002:mayDecay = off',
+                        '4900004:mayDecay = off',
+                        '4900022:m0 = 1',    
+                        '4900022:0:meMode = 0', 		
+		
+                        #'SLHA:minDecayDeltaM = 0.001',
+		
+                        'HiddenValley:Ngauge = 1',
+                        'HiddenValley:doKinMix = on',
+                        'HiddenValley:FSR = on',
+                        'HiddenValley:alphaFSR = 0'
+		
+		
+		
+		
                 ),
                 parameterSets = cms.vstring('processParameters')
         )
@@ -114,7 +189,7 @@ process.ProductionFilterSequence = cms.Sequence(process.generator)
 
 
 process.AODSIMoutput = cms.OutputModule("PoolOutputModule",
-    SelectEvents = cms.untracked.PSet(
+                                        SelectEvents = cms.untracked.PSet(
         SelectEvents = cms.vstring('generation_step')
     ),
     compressionAlgorithm = cms.untracked.string('LZMA'),
@@ -157,4 +232,5 @@ for path in process.paths:
 file = open('GenTest.txt','w')
 file.write(str(process.dumpPython()))
 file.close()
+
 

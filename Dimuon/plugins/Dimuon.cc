@@ -13,7 +13,7 @@ Implementation:
 //
 // Original Author:  Shawn Gregory Zaleski
 //         Created:  Tue, 30 Jun 2015 14:01:36 GMT
-//
+// Edited by Ming Huang to look at lepton jets originating from dark photons
 //
 
 
@@ -22,6 +22,7 @@ Implementation:
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "/cvmfs/cms.cern.ch/slc7_amd64_gcc820/cms/cmssw/CMSSW_10_6_4/src/FWCore/Framework/interface/Run.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 #include <FWCore/ServiceRegistry/interface/Service.h>
 #include <CommonTools/UtilAlgos/interface/TFileService.h>
@@ -70,7 +71,12 @@ private:
   //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
 
-
+  void gammavsSort(std::vector<const reco::Candidate*> fullGammavs, std::vector<const reco::Candidate*> &emptyGammavs,
+			   std::vector<const reco::Candidate*> &eleSet, std::vector<const reco::Candidate*> &notGammavs,
+			   std::vector<const reco::Candidate*> &fullGammavsRef);
+  void notGammavsSort(std::vector<const reco::Candidate*> fullNotGammavs, std::vector<const reco::Candidate*> &emptyNotGammavs,
+			      std::vector<const reco::Candidate*> &eleSet, std::vector<const reco::Candidate*> &gammavs,
+			      std::vector<const reco::Candidate*> &fullNotGammavsRef);
 
   struct P4Struct {
     float energy,et,eta,phi,pt,mass,theta;
@@ -92,16 +98,27 @@ private:
   TTree* tree_;
 
 
+  TH1F *h_darkPhotonNum, *h_darkPhotonPT;
+  TH1F *h_eleFromGammavNum, *h_eleFromGammavPT;
+  TH1F *h_elePhi, *h_eleEta, *h_eleR, *h_eleInvariantMass;
+  TH1F *h_eleDeltaPhi, *h_eleDeltaEta;
+  TH1F *h_eleBiggestPT, *h_eleBiggestPTEta, *h_eleBiggestPTPhi;
+  TH1F *h_neutralinoNum;
+  TH1F *h_eleSetPT, *h_eleSetE, *h_eleSetSigmaPhi, *h_eleSetSigmaEta;
+  //  TH1F *h_nuEleFromGammavNum, *h_nuEleFromGammavPT;
 
-  TH1F * h_Zmass, *h_Zpt,*h_Zeta,*h_Zphi,*h_Zcharge;
-  TH1F *h_muMinusmass,*h_muMinuspt,*h_muMinuseta,*h_muMinusphi,*h_muMinuscharge;
-  TH1F *h_muPlusmass,*h_muPluspt,*h_muPluseta,*h_muPlusphi,*h_muPluscharge;
-  TH1F *h_dphi,*h_dtheta, *h_dr, *h_thetaMuMinus,*h_thetaMuPlus;
-  TH1F *h_massInvar, *h_dimuonPt, *h_dimuonEta, *h_dimuonPhi;
-  TH1F *h_cosTheta, *h_tanPhi, *h_csTheta, *h_csPhi;
-  TH1F *h_cosThetaPlusInvariantMass, *h_cosThetaMinusInvariantMass;
+  //  TH1F *h_gammavMissingDaughters;
+  //  TH1F *h_gammavExtraDaughters; // make sure the dark photon only has two daughters
 
-  TH2F *h2_pt1_vs_pt2,*h2_eta1_vs_eta2,*h2_phi1_vs_phi2;
+  // TH1F * h_Zmass, *h_Zpt,*h_Zeta,*h_Zphi,*h_Zcharge;
+  // TH1F *h_muMinusmass,*h_muMinuspt,*h_muMinuseta,*h_muMinusphi,*h_muMinuscharge;
+  // TH1F *h_muPlusmass,*h_muPluspt,*h_muPluseta,*h_muPlusphi,*h_muPluscharge;
+  // TH1F *h_dphi,*h_dtheta, *h_dr, *h_thetaMuMinus,*h_thetaMuPlus;
+  // TH1F *h_massInvar, *h_dimuonPt, *h_dimuonEta, *h_dimuonPhi;
+  // TH1F *h_cosTheta, *h_tanPhi, *h_csTheta, *h_csPhi;
+  // TH1F *h_cosThetaPlusInvariantMass, *h_cosThetaMinusInvariantMass;
+
+  // TH2F *h2_pt1_vs_pt2,*h2_eta1_vs_eta2,*h2_phi1_vs_phi2;
 
   P4Struct bosonP4_; // as a sanity check we have the right event...
   P4Struct muMinusP4_;
@@ -127,43 +144,73 @@ private:
 void Dimuon::beginJob()
 {
   edm::Service<TFileService> fs;
-  h_Zmass = fs->make<TH1F>("Zmass" , "m", 1000, 0., 600);
-  h_Zpt  = fs->make<TH1F>( "Zpt"  , "p_{t}", 500,  0., 2500. );
-  h_Zeta = fs->make<TH1F>( "Zeta" , "#eta" , 100, -10., 10.    );
-  h_Zphi = fs->make<TH1F>( "Zphi" , "#phi" , 100,  -3.20, 3.20   );
-  h_Zcharge = fs->make<TH1F>( "Zcharge" , "Q" ,3,  -1.5, 1.5    );
-  h_muMinusmass = fs->make<TH1F>("muMinusmass" , "m", 1000, 0., 500);
-  h_muMinuspt  = fs->make<TH1F>( "muMinuspt"  , "p_{t}", 500,  0., 2500. );
-  h_muMinuseta = fs->make<TH1F>( "muMinuseta" , "#eta" , 100, -5., 5.    );
-  h_muMinusphi = fs->make<TH1F>( "muMinusphi" , "#phi" , 100,  -3.15, 3.15   );
-  h_muMinuscharge = fs->make<TH1F>( "muMinuscharge" , "Q" ,3,  -1.5, 1.5    );
+  h_darkPhotonNum = fs->make<TH1F>("darkPhotonNum", "Amount of dark photons per event", 15, -.5, 14.5);
+  h_darkPhotonPT = fs->make<TH1F>("darkPhotonPT", "Dark Photon PT", 100, 0, 400);
 
-  h_muPlusmass = fs->make<TH1F>("muPlusmass" , "m", 1000, 0., 500);
-  h_muPluspt  = fs->make<TH1F>( "muPluspt"  , "p_{t}", 500,  0., 2500. );
-  h_muPluseta = fs->make<TH1F>( "muPluseta" , "#eta" , 100, -5., 5.    );
-  h_muPlusphi = fs->make<TH1F>( "muPlusphi" , "#phi" , 100,  -3.15, 3.15   );
-  h_muPluscharge = fs->make<TH1F>( "muPluscharge" , "Q" ,3,  -1.5, 1.5    );
+  h_eleFromGammavNum = fs->make<TH1F>("eleFromGammavNum", "Number of electrons from dark photons in each event", 14, 0, 14);
+  h_eleFromGammavPT = fs->make<TH1F>("eleFromGammavPT", "PT of electrons from dark photons", 100, 0, 400);
+  h_elePhi = fs->make<TH1F>("elePhi", "Phi of electrons", 100, -3.2, 3.2);
+  h_eleEta = fs->make<TH1F>("eleEta", "Eta of electrons", 100, -10, 10);
+  h_eleInvariantMass = fs->make<TH1F>("eleInvariantMass", "Invariant mass of electrons", 100, -0.5, 1.5);
 
-  h_dphi = fs->make<TH1F>("delta phi", "#delta #phi", 100, -3.15, 3.15 );       
-  h_dtheta = fs->make<TH1F>("delta theta", "#delta #theta", 100, -3.15, 3.15); 
-  h_dr = fs->make<TH1F>("delta r", "#delta r", 100, 0, 10);
-  h_thetaMuMinus = fs->make<TH1F>("theta muMinus", "#theta", 100, -3.15, 3.15);      
-  h_thetaMuPlus = fs->make<TH1F>("theta muPlus", "#theta", 100, -3.15, 3.15); 
-  h_massInvar = fs->make<TH1F>("Invariant mass", "Invariant mass", 350, 0., 3500.);
-  h_dimuonPt = fs->make<TH1F>("Dimuon Pt", "Dimuon Pt", 500, 0, 2500);
-  h_dimuonEta = fs->make<TH1F>("Dimuon eta", "Dimuon #eta", 100, -5, 5);
-  h_dimuonPhi = fs->make<TH1F>("Dimuon Phi", "Dimuon #phi", 100, -3.15, 3.15);
+  h_eleDeltaPhi = fs->make<TH1F>("eleDeltaPhi", "difference in phi between two electrons that came from the same dark photon", 100, -10, 10);
+  h_eleDeltaEta = fs->make<TH1F>("eleDeltaEta", "delta eta of electrons from the same dark photon", 100, -10, 10);
+  h_eleR = fs->make<TH1F>("eleR", "distance", 100, -0.5, 10);
 
-  h_cosTheta = fs->make<TH1F>("cosTheta", "cos #theta", 100, -1.01, 1.01);
-  h_tanPhi = fs->make<TH1F>("tanPhi", "tan #phi", 100, -1000.0, 1000.0);
-  h_csTheta = fs->make<TH1F>("csTheta", "#theta_{CS}", 100, -3.15, 3.15);
-  h_csPhi = fs->make<TH1F>("csPhi", "#phi_{CS}", 100, -3.15, 3.15);
-  h_cosThetaMinusInvariantMass = fs->make<TH1F>("InvariantMass_cosThetaMinus", "InvariantMass_cosThetaMinus", 350, 0., 3500.);
-  h_cosThetaPlusInvariantMass = fs->make<TH1F>("InvariantMass_cosThetaPlus", "InvariantMass_cosThetaPlus", 350, 0., 3500.);
+  h_eleBiggestPT = fs->make<TH1F>("eleBiggestPT", "PT of electron with biggest PT", 100, 0, 400);
+  h_eleBiggestPTEta = fs->make<TH1F>("eleBiggestPTEta", "Eta of electron with biggest PT", 100, -10, 10);
+  h_eleBiggestPTPhi = fs->make<TH1F>("eleBigestPTPhi", "Phi of electron with biggest PT", 100, -3.2, 3.2);
 
-  h2_pt1_vs_pt2   = fs->make<TH2F>( "pt1_vs_pt2"   , "p_{t,1} vs. p_{t,2}"   , 500,  0., 2500., 500,  0., 2500.);
-  h2_eta1_vs_eta2 = fs->make<TH2F>( "eta1_vs_eta2" , "#eta_{1} vs. #eta_{2}" , 100, -5., 5.   , 100, -5., 5.   );
-  h2_phi1_vs_phi2 = fs->make<TH2F>( "phi1_vs_phi2" , "#phi_{1} vs. #phi_{2}" , 100,  -3.15, 3.15  , 100,  -3.15, 3.15  );
+  h_neutralinoNum = fs->make<TH1F>("neutralinoNum", "Number of neutralinos per event", 14, 0, 14);
+
+  h_eleSetPT = fs->make<TH1F>("eleSetPT", "The total PT of a set of all the electrons that came from the same neutralino", 100, 0, 400);
+  h_eleSetE = fs->make<TH1F>("eleSetE", "The total energy of a set of all the electrons that came from the same neutralino", 100, 0, 400);
+  h_eleSetSigmaPhi = fs->make<TH1F>("eleSetSigmaPhi", "The standard deviation of the phis in a set of all the electrons that came from the same neutralino", 100, -0.1, 3.2);
+  h_eleSetSigmaEta = fs->make<TH1F>("eleSetSigmaEta", "The standard deviation of the etas in a set of all the electrons that came from the same neutralino", 150, -.5, 2.5);
+
+  //  h_nuEleFromGammavNum = fs->make<TH1F>("nuEleFromGammavNum", "Number of electron neutralinos from dark photons", 14, 0, 14);
+  //  h_nuEleFromGammavPT = fs->make<TH1F>("nuEleFromGammavPT", "PT of electron neutralinos from dark photons", 100, 0, 400);
+
+  //  h_gammavMissingDaughters = fs->make<TH1F>("gammavMissingDaughters", "Number of dark photon with less than two daughters", 14, 0, 14);
+  //  h_gammavExtraDaughters = fs->make<TH1F>("gammavExtraDaughters", "Numbers of dark photons with more than two daughters", 14, 0, 14);
+
+  // h_Zmass = fs->make<TH1F>("Zmass" , "m", 1000, 0., 600);
+  // h_Zpt  = fs->make<TH1F>( "Zpt"  , "p_{t}", 500,  0., 2500. );
+  // h_Zeta = fs->make<TH1F>( "Zeta" , "#eta" , 100, -10., 10.    );
+  // h_Zphi = fs->make<TH1F>( "Zphi" , "#phi" , 100,  -3.20, 3.20   );
+  // h_Zcharge = fs->make<TH1F>( "Zcharge" , "Q" ,3,  -1.5, 1.5    );
+  // h_muMinusmass = fs->make<TH1F>("muMinusmass" , "m", 1000, 0., 500);
+  // h_muMinuspt  = fs->make<TH1F>( "muMinuspt"  , "p_{t}", 500,  0., 2500. );
+  // h_muMinuseta = fs->make<TH1F>( "muMinuseta" , "#eta" , 100, -5., 5.    );
+  // h_muMinusphi = fs->make<TH1F>( "muMinusphi" , "#phi" , 100,  -3.15, 3.15   );
+  // h_muMinuscharge = fs->make<TH1F>( "muMinuscharge" , "Q" ,3,  -1.5, 1.5    );
+
+  // h_muPlusmass = fs->make<TH1F>("muPlusmass" , "m", 1000, 0., 500);
+  // h_muPluspt  = fs->make<TH1F>( "muPluspt"  , "p_{t}", 500,  0., 2500. );
+  // h_muPluseta = fs->make<TH1F>( "muPluseta" , "#eta" , 100, -5., 5.    );
+  // h_muPlusphi = fs->make<TH1F>( "muPlusphi" , "#phi" , 100,  -3.15, 3.15   );
+  // h_muPluscharge = fs->make<TH1F>( "muPluscharge" , "Q" ,3,  -1.5, 1.5    );
+
+  // h_dphi = fs->make<TH1F>("delta phi", "#delta #phi", 100, -3.15, 3.15 );       
+  // h_dtheta = fs->make<TH1F>("delta theta", "#delta #theta", 100, -3.15, 3.15); 
+  // h_dr = fs->make<TH1F>("delta r", "#delta r", 100, 0, 10);
+  // h_thetaMuMinus = fs->make<TH1F>("theta muMinus", "#theta", 100, -3.15, 3.15);      
+  // h_thetaMuPlus = fs->make<TH1F>("theta muPlus", "#theta", 100, -3.15, 3.15); 
+  // h_massInvar = fs->make<TH1F>("Invariant mass", "Invariant mass", 350, 0., 3500.);
+  // h_dimuonPt = fs->make<TH1F>("Dimuon Pt", "Dimuon Pt", 500, 0, 2500);
+  // h_dimuonEta = fs->make<TH1F>("Dimuon eta", "Dimuon #eta", 100, -5, 5);
+  // h_dimuonPhi = fs->make<TH1F>("Dimuon Phi", "Dimuon #phi", 100, -3.15, 3.15);
+
+  // h_cosTheta = fs->make<TH1F>("cosTheta", "cos #theta", 100, -1.01, 1.01);
+  // h_tanPhi = fs->make<TH1F>("tanPhi", "tan #phi", 100, -1000.0, 1000.0);
+  // h_csTheta = fs->make<TH1F>("csTheta", "#theta_{CS}", 100, -3.15, 3.15);
+  // h_csPhi = fs->make<TH1F>("csPhi", "#phi_{CS}", 100, -3.15, 3.15);
+  // h_cosThetaMinusInvariantMass = fs->make<TH1F>("InvariantMass_cosThetaMinus", "InvariantMass_cosThetaMinus", 350, 0., 3500.);
+  // h_cosThetaPlusInvariantMass = fs->make<TH1F>("InvariantMass_cosThetaPlus", "InvariantMass_cosThetaPlus", 350, 0., 3500.);
+
+  // h2_pt1_vs_pt2   = fs->make<TH2F>( "pt1_vs_pt2"   , "p_{t,1} vs. p_{t,2}"   , 500,  0., 2500., 500,  0., 2500.);
+  // h2_eta1_vs_eta2 = fs->make<TH2F>( "eta1_vs_eta2" , "#eta_{1} vs. #eta_{2}" , 100, -5., 5.   , 100, -5., 5.   );
+  // h2_phi1_vs_phi2 = fs->make<TH2F>( "phi1_vs_phi2" , "#phi_{1} vs. #phi_{2}" , 100,  -3.15, 3.15  , 100,  -3.15, 3.15  );
 
   tree_= fs->make<TTree>("pdfTree","PDF Tree");
   // tree_->Branch("evtId",&evtId_,EventId::contents().c_str());
@@ -241,220 +288,415 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   muMinusPID_=0;
   muPlusPID_=0;
 
-  const reco::Candidate* boson;
+  //  const reco::Candidate* boson;
   const reco::Candidate* daughter1;
   const reco::Candidate* daughter2;
-  const reco::Candidate* mother1;
+  //  const reco::Candidate* mother1;
   //  const reco::Candidate* mother2;
-  const reco::Candidate* muMinus;
-  const reco::Candidate* muPlus;
+  //  const reco::Candidate* muMinus;
+  //  const reco::Candidate* muPlus;
   math::XYZTLorentzVectorD dimuon;
-  double dimuonPx, dimuonPy, dimuonPz, dimuonPt, pseudorapidity, Phi, mu1Energy, mu2Energy, dimuonQ;
-  double thetaCos, thetaCS, phiTan, phiCS;
-  double muPlusKPlus, muPlusKMinus, muMinusKPlus, muMinusKMinus, invariantK;
+  //  double dimuonPx, dimuonPy, dimuonPz, dimuonPt, pseudorapidity, Phi, mu1Energy, mu2Energy, dimuonQ;
+  //  double thetaCos, thetaCS, phiTan, phiCS;
+  //  double muPlusKPlus, muPlusKMinus, muMinusKPlus, muMinusKMinus, invariantK;
 
+  double numDarkPhotons = 0;
+  double numNeutralinos = 0;
 
-      for(auto &part : genParts){
-	if((part.pdgId() == 1 || part.pdgId() == 2 || part.pdgId() == 3 || part.pdgId() == 4 || part.pdgId() == 5 || part.pdgId() == 6) && 
-	   (abs(part.daughter(0)->pdgId()) == 11 || abs(part.daughter(0)->pdgId()) == 13)){
-	  if(debug_ > 0){ std::cout << "\nFound the quark! " << "\nQuark is: " << part.pdgId() << "\tStatus is: " << part.status() << "\tNumber of daughters are: " <<
-	    part.numberOfDaughters() << "\tFirst daughter is:"  << part.daughter(0)->pdgId() << "\tSecond daughter is: " << part.daughter(1)->pdgId() << std::endl;
-	    //	    mother1 = getMother(part.mother(0), 2212);
-	    //std::cout << "\nQuark mother is:" << mother1->pdgId() << std::endl;
-	  //      if(part.status() < -20 && part.status() > -30){ std::cout << "\nFound the Z boson!";
-	  std::cout << "\nkinematic properties of the particles are: " << std::endl;
-	  std::cout << "\npT1: " << part.daughter(0)->pt() << "\tpT2: " << part.daughter(1)->pt() << std::endl;
-	  std::cout << "\neta1: " << part.daughter(0)->eta() << "\teta2: " << part.daughter(1)->eta() << std::endl;
-	  std::cout << "\nphi1: " << part.daughter(0)->phi() << "\tphi2: " << part.daughter(1)->phi() << std::endl;
-	  }
-	  daughter1 = getLastDaughter(part.daughter(0), part.daughter(0)->pdgId());
-	  daughter2 = getLastDaughter(part.daughter(1), part.daughter(1)->pdgId());
-	  std::cout << "\nDaughter particle is: " << daughter1->pdgId() << "tStatus is: " << daughter1->status()
-		    << "\tDaughter2 is: " << daughter2->pdgId() << "\tStatus is: " << daughter2->status() << std::endl;
-	  boson = nullptr;
-	  if(!daughter1 || !daughter2){
-	    std::cout<<"daughter1::0x"<<std::hex<<daughter1<<std::dec<<std::endl;
-	    std::cout<<"daughter2::0x"<<std::hex<<daughter2<<std::dec<<std::endl;
-	  }
-	}
+  std::vector<const reco::Candidate*> eles;
 
-	else if(part.pdgId() == 23 && (abs(part.daughter(0)->pdgId()) == 11 || abs(part.daughter(0)->pdgId()) == 13)){
-	  if(debug_ > 0){std::cout << "\nFound the Z boson! " << "\tStatus is: " << part.status() << "\tNumber of daughters are: " <<
-	    part.numberOfDaughters() << "\tFirst daughter is:"  << part.daughter(0)->pdgId() << "\tSecond daughter is: " << part.daughter(1)->pdgId() << std::endl;
-	  //      if(part.status() < -20 && part.status() > -30){ std::cout << "\nFound the Z boson!";
-	  std::cout << "\nkinematic properties of the particles are: " << std::endl;
-	  std::cout << "\npT1: " << part.daughter(0)->pt() << "\tpT2: " << part.daughter(1)->pt() << std::endl;
-	  std::cout << "\neta1: " << part.daughter(0)->eta() << "\teta2: " << part.daughter(1)->eta() << std::endl;
-	  std::cout << "\nphi1: " << part.daughter(0)->phi() << "\tphi2: " << part.daughter(1)->phi() << std::endl;
-	  }
-	  daughter1 = getLastDaughter(part.daughter(0), part.daughter(0)->pdgId());
-	  daughter2 = getLastDaughter(part.daughter(1), part.daughter(1)->pdgId());
-	  std::cout << "\nDaughter particle is: " << daughter1->pdgId() << "tStatus is: " << daughter1->status()
-		    << "\tDaughter2 is: " << daughter2->pdgId() << "\tStatus is: " << daughter2->status() << std::endl;
-	  mother1 = &part;
-	  boson = mother1;
-	  if(!boson || !daughter1 || !daughter2){
-	    std::cout<<"boson::0x"<<std::hex<<boson<<std::dec<<std::endl;
-	    std::cout<<"daughter1::0x"<<std::hex<<daughter1<<std::dec<<std::endl;
-	    std::cout<<"daughter2::0x"<<std::hex<<daughter2<<std::dec<<std::endl;
-	  }
+  double invariantMass = 0;
+  double deltaR = 0;
 
-	}
-      }
-
-
-    if(debug_ > 2){
-      std::cout << "Eta of daughter1 is: " << daughter1->eta() << "\n";
-      std::cout << "Eta of daughter2 is: " << daughter2->eta() << "\n";
-    }
-
-      if(boson){
-	bosonId_=boson->pdgId();
-	bosonP4_.fill(boson->p4());
-	
-	h_Zmass->Fill(boson->mass());
-	h_Zpt->Fill(boson->pt());
-	h_Zeta ->Fill(boson->eta());
-	h_Zphi ->Fill(boson->phi());
-	h_Zcharge->Fill(boson->charge());
-      }
-
-    if(daughter1->charge() > 0 && daughter2->charge() < 0){
-      muMinus = daughter2;
-      muPlus = daughter1;
-    }
-    else if(daughter1->charge() < 0 && daughter2->charge() > 0){
-      muMinus = daughter1;
-      muPlus = daughter2;
-    }
-
-    else return;
-
-    if(debug_ > 0){  
-      std::cout<< "\n\nDaughter1: pId = " << muMinus->pdgId() << "\tpT = " << muMinus->pt() << "\teta = " 
-	       << muMinus->eta() << "\tphi = " << muMinus->phi() << "\tq = " << muMinus->charge();
-      std::cout<< "\nDaughter2: pId = " << muPlus->pdgId() << "\tpT = " << muPlus->pt() << "\teta = " << muPlus->eta() << "\tphi = " << 
-	muPlus->phi() << "\tq = " << muPlus->charge();
-    }
-    
-  muMinusP4_.fill(muMinus->p4());
-    muMinusPID_=muMinus->pdgId();
-    if(debug_ > 0){  
-      std::cout<< "\n\nDaughter1: pId = " << muMinus->pdgId() << "\tpT = " << muMinus->pt() << "\teta = " 
-	       << muMinus->eta() << "\tphi = " << muMinus->phi() << "\tq = " << muMinus->charge();
-    std::cout<< "\nDaughter2: pId = " << muPlus->pdgId() << "\tpT = " << muPlus->pt() << "\teta = " << muPlus->eta() << "\tphi = " << 
-      muPlus->phi() << "\tq = " << muPlus->charge();
-    }
-
-
-    h_muMinusmass->Fill(muMinus->mass());
-    h_muMinuspt->Fill(muMinus->pt());
-    h_muMinuseta->Fill(muMinus->eta());
-    h_muMinusphi->Fill(muMinus->phi());
-    h_muMinuscharge->Fill(muMinus->charge());
-    h_thetaMuMinus->Fill(muMinus->theta());  
+  // if both electrons come from the same dark photon, find invariant mass, delta phi, delta r, 
+  // eta phi for biggest pt ele
   
-    muPlusP4_.fill(muPlus->p4());
-    muPlusPID_=muPlus->pdgId();
+  for(auto &part : genParts){
+    if(part.pdgId() == 4900022){ // if particle is a dark photon
+      numDarkPhotons++; // add one to the dark photon amount counter
+      h_darkPhotonPT->Fill(part.pt()); // note the PT in histogram
+      
+      if(part.numberOfDaughters() == 2){ // if particle has two daughters
+	
+	// if both daughters are either electron or positron
+	if(abs(part.daughter(0)->pdgId()) == 11 && abs(part.daughter(1)->pdgId()) == 11){
+	  h_eleFromGammavPT->Fill(part.daughter(0)->pt()); // enter the pt of the electrons
+	  h_eleFromGammavPT->Fill(part.daughter(1)->pt());
 
-    h_muPlusmass->Fill(muPlus->mass());
-    h_muPluspt->Fill(muPlus->pt());
-    h_muPluseta->Fill(muPlus->eta());
-    h_muPlusphi->Fill(muPlus->phi());
-    h_muPluscharge->Fill(muPlus->charge());
-    h_thetaMuPlus->Fill(muPlus->theta());    
+	  eles.push_back(part.daughter(0)); // stick the electrons in a storage system for later use
+	  eles.push_back(part.daughter(1));
 
-    muPlusKPlus = (1/sqrt(2))*(muPlus->energy() + muPlus->pz());
-    muPlusKMinus = (1/sqrt(2))*(muPlus->energy() - muPlus->pz());
-    muMinusKPlus = (1/sqrt(2))*(muMinus->energy() + muMinus->pz());
-    muMinusKMinus = (1/sqrt(2))*(muMinus->energy() - muMinus->pz());
+	  h_elePhi->Fill(part.daughter(0)->phi()); // put the phi and eta of the electrons into their histograms
+	  h_eleEta->Fill(part.daughter(0)->eta());
 
-    invariantK = (muPlusKPlus*muMinusKMinus - muMinusKPlus*muPlusKMinus);
-    std::cout << "\n\nInvariantK is: " << invariantK << std::endl;
+	  h_elePhi->Fill(part.daughter(1)->phi());
+	  h_eleEta->Fill(part.daughter(1)->eta());
 
-    dimuon = muMinus->p4() + muPlus->p4();
+	  daughter1 = part.daughter(0); // invariant mass, delta phi, delta eta, delta r calculations
+	  daughter2 = part.daughter(1);
 
-    dimuonPt =dimuon.pt();
-    dimuonPz = dimuon.pz();
-    pseudorapidity = asinh(dimuonPz/dimuonPt);
-    dimuonPx = dimuon.px();
-    dimuonPy = dimuon.py();
-    Phi = acos(dimuonPx/dimuonPt);
-    dimuonQ = sqrt(pow(dimuon.energy(),2) - pow(dimuon.pt(),2) - pow(dimuon.pz(),2));
-    std::cout << "\n\nDimuon Energy is: " << dimuon.energy() << std::endl << std::endl;
+	  invariantMass = sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi()))));
+	  h_eleInvariantMass->Fill(invariantMass);
+
+	  double deltaEta = daughter2->eta()-daughter1->eta();
+	  double deltaPhi = daughter2->phi()-daughter1->phi();
+
+	  h_eleDeltaPhi->Fill(deltaPhi);
+	  h_eleDeltaEta->Fill(deltaEta);
+
+	  deltaR = std::sqrt((deltaEta)*(deltaEta)-(deltaPhi)*(deltaPhi));
+	  if(deltaR != 0){
+	    h_eleR->Fill(deltaR);
+	  }
+	}
+      }
+    }
+
+    // lepton groups analysis leading to reconstruction
+    std::vector<const reco::Candidate*> gammavs;
+    std::vector<const reco::Candidate*> gammavs2;
+    std::vector<const reco::Candidate*> notGammavs;
+    std::vector<const reco::Candidate*> notGammavs2;
+    std::vector<const reco::Candidate*> eleSet;
+    if(abs(part.pdgId() == 1000022)){ // if particle is a neutralino
+      numNeutralinos++; // count neutralino number
+
+      if(part.numberOfDaughters() == 2 && part.daughter(0)->pdgId() != 1000022 && part.daughter(1)->pdgId() != 1000022){
+	// sorting neutralino daughters as gammav or not gammav for further analysis
+	if(part.daughter(0)->pdgId() == 4900022){ 
+	  gammavs.push_back(part.daughter(0));
+	}
+	else{
+	  notGammavs.push_back(part.daughter(0));
+	}
+	if(part.daughter(1)->pdgId() == 4900022){
+	  gammavs.push_back(part.daughter(0));
+	}
+	else{
+	  notGammavs.push_back(part.daughter(1));
+	}
+      }
+    }
+    while(!notGammavs.empty() || !gammavs.empty()){ // as long as there are non electrons that aren't sorted
+      gammavsSort(gammavs, gammavs2, eleSet, notGammavs, gammavs); 
+      gammavsSort(gammavs2, gammavs, eleSet, notGammavs, gammavs2);
+      
+      notGammavsSort(notGammavs, notGammavs2, eleSet, gammavs, notGammavs);
+      notGammavsSort(notGammavs2, notGammavs, eleSet, gammavs, notGammavs2);
+    }
+    // total pt, total energy, of the set of electrons
+    double eleSetPT = 0;
+    double eleSetE = 0;
+    for(auto &ele : eleSet){
+      eleSetPT += ele->pt();
+      eleSetE += ele->energy();
+    }
+    if(eleSetPT != 0){
+      h_eleSetPT->Fill(eleSetPT);
+      h_eleSetE->Fill(eleSetE);
     
-    double denominatorTheta, denominatorPhi1, denominatorPhi2, numeratorPhi1, numeratorPhi2;
-    double denominatorPhi, numeratorPhi;
-    double deltaX, deltaY;
-    double invariantMass;
+      double eleSetSumPhi = 0;
+      double eleSetSumEta = 0;
+      // standard deviation of set of electrons
+      for(auto &ele : eleSet){ // sum the phi/eta
+	eleSetSumPhi += ele->phi();
+	eleSetSumEta += ele->eta();
+      }
+      double eleSetMeanPhi = eleSetSumPhi/eleSet.size(); // get the mean of phi/eta
+      double eleSetMeanEta = eleSetSumEta/eleSet.size();
+      
+      double phiMinusMeanSquaresSum = 0;
+      double etaMinusMeanSquaresSum = 0;
+      for(auto &ele:eleSet){ // get the phi/eta minus their mean and then square that and then add it to a running total (sum)
+	phiMinusMeanSquaresSum += (ele->phi() - eleSetMeanPhi) * (ele->phi() - eleSetMeanPhi);
+	etaMinusMeanSquaresSum += (ele->eta() - eleSetMeanEta) * (ele->eta() - eleSetMeanEta);
+      }
+      double phiMinusMeanSquaresMean = phiMinusMeanSquaresSum/eleSet.size(); // get the mean of the previous step
+      double etaMinusMeanSquaresMean = etaMinusMeanSquaresSum/eleSet.size();
+      
+      h_eleSetSigmaPhi->Fill(std::sqrt(phiMinusMeanSquaresMean)); // get the standard deviation 
+      h_eleSetSigmaEta->Fill(std::sqrt(etaMinusMeanSquaresMean));
+    }
+    h_darkPhotonNum->Fill(numDarkPhotons); // fill the number of dark photons for this event
+    h_eleFromGammavNum->Fill(eles.size()); // fill the number of electrons for this event
+    h_neutralinoNum->Fill(numNeutralinos); // fill the number of neutralinos for this event
+  }
+  const reco::Candidate* bigPTEle;
+  double biggestElePt = 0;
 
-    denominatorTheta = dimuonQ*sqrt(pow(dimuonQ, 2) + pow(dimuon.pt(), 2));
-    thetaCos = (dimuon.pz()/fabs(dimuon.pz()))*(2/denominatorTheta)*invariantK;
-    thetaCS = acos(thetaCos);
-
-    denominatorPhi1 = dimuonQ*dimuon.pt();
-    numeratorPhi1 = sqrt(pow(dimuonQ, 2) + pow(dimuon.pt(), 2));
-    deltaX = muPlus->px() - muMinus->px();
-    deltaY = muPlus->py() - muMinus->py();
-    denominatorPhi2 = ((deltaX*dimuon.px()) + (deltaY*dimuon.py()));
-    numeratorPhi2 = ((deltaX*dimuon.py()) + (deltaY*dimuon.px()));
-    numeratorPhi = numeratorPhi1*numeratorPhi2;
-    denominatorPhi = denominatorPhi1 * denominatorPhi2;
-
-    phiTan = numeratorPhi/denominatorPhi;
-    phiCS = atan(phiTan);
+  for(auto &ele : eles){ // for all electrons that came from dark photons in this event
+    if(ele->pt() > biggestElePt){ // get the biggest pt electron, and enter all electron pts into histogram
+      bigPTEle = ele;
+      biggestElePt = ele->pt();
+      
+    }
+  }
+  if(biggestElePt != 0){ // get the pt, eta, phi for the electron with the biggest pt into histograms
+    h_eleBiggestPT->Fill(bigPTEle->pt());
+    h_eleBiggestPTEta->Fill(bigPTEle->eta());
+    h_eleBiggestPTPhi->Fill(bigPTEle->phi());
+  }
 
 
-    mu1Energy = muPlus->energy();
-    mu2Energy = muMinus->energy();
-    std::cout << "\n\nmuon Energies are: " << mu1Energy << "__" << mu2Energy << std::endl << std::endl;
-    std::cout << "\ndimuon px_py_pz are: "<< dimuonPx << "_" << dimuonPy << "_" << dimuonPz << std::endl;
+	// if((part.pdgId() == 1 || part.pdgId() == 2 || part.pdgId() == 3 || part.pdgId() == 4 || part.pdgId() == 5 || part.pdgId() == 6) && 
+  // 	   (abs(part.daughter(0)->pdgId()) == 11 || abs(part.daughter(0)->pdgId()) == 13)){
+  // 	  if(debug_ > 0){ std::cout << "\nFound the quark! " << "\nQuark is: " << part.pdgId() << "\tStatus is: " << part.status() << "\tNumber of daughters are: " <<
+  // 	    part.numberOfDaughters() << "\tFirst daughter is:"  << part.daughter(0)->pdgId() << "\tSecond daughter is: " << part.daughter(1)->pdgId() << std::endl;
+  // 	    //	    mother1 = getMother(part.mother(0), 2212);
+  // 	    //std::cout << "\nQuark mother is:" << mother1->pdgId() << std::endl;
+  // 	  //      if(part.status() < -20 && part.status() > -30){ std::cout << "\nFound the Z boson!";
+  // 	  std::cout << "\nkinematic properties of the particles are: " << std::endl;
+  // 	  std::cout << "\npT1: " << part.daughter(0)->pt() << "\tpT2: " << part.daughter(1)->pt() << std::endl;
+  // 	  std::cout << "\neta1: " << part.daughter(0)->eta() << "\teta2: " << part.daughter(1)->eta() << std::endl;
+  // 	  std::cout << "\nphi1: " << part.daughter(0)->phi() << "\tphi2: " << part.daughter(1)->phi() << std::endl;
+  // 	  }
+  // 	  daughter1 = getLastDaughter(part.daughter(0), part.daughter(0)->pdgId());
+  // 	  daughter2 = getLastDaughter(part.daughter(1), part.daughter(1)->pdgId());
+  // 	  std::cout << "\nDaughter particle is: " << daughter1->pdgId() << "tStatus is: " << daughter1->status()
+  // 		    << "\tDaughter2 is: " << daughter2->pdgId() << "\tStatus is: " << daughter2->status() << std::endl;
+  // 	  boson = nullptr;
+  // 	  if(!daughter1 || !daughter2){
+  // 	    std::cout<<"daughter1::0x"<<std::hex<<daughter1<<std::dec<<std::endl;
+  // 	    std::cout<<"daughter2::0x"<<std::hex<<daughter2<<std::dec<<std::endl;
+  // 	  }
+  // 	}
+
+  // 	else if(part.pdgId() == 23 && (abs(part.daughter(0)->pdgId()) == 11 || abs(part.daughter(0)->pdgId()) == 13)){
+  // 	  if(debug_ > 0){std::cout << "\nFound the Z boson! " << "\tStatus is: " << part.status() << "\tNumber of daughters are: " <<
+  // 	    part.numberOfDaughters() << "\tFirst daughter is:"  << part.daughter(0)->pdgId() << "\tSecond daughter is: " << part.daughter(1)->pdgId() << std::endl;
+  // 	  //      if(part.status() < -20 && part.status() > -30){ std::cout << "\nFound the Z boson!";
+  // 	  std::cout << "\nkinematic properties of the particles are: " << std::endl;
+  // 	  std::cout << "\npT1: " << part.daughter(0)->pt() << "\tpT2: " << part.daughter(1)->pt() << std::endl;
+  // 	  std::cout << "\neta1: " << part.daughter(0)->eta() << "\teta2: " << part.daughter(1)->eta() << std::endl;
+  // 	  std::cout << "\nphi1: " << part.daughter(0)->phi() << "\tphi2: " << part.daughter(1)->phi() << std::endl;
+  // 	  }
+  // 	  daughter1 = getLastDaughter(part.daughter(0), part.daughter(0)->pdgId());
+  // 	  daughter2 = getLastDaughter(part.daughter(1), part.daughter(1)->pdgId());
+  // 	  std::cout << "\nDaughter particle is: " << daughter1->pdgId() << "tStatus is: " << daughter1->status()
+  // 		    << "\tDaughter2 is: " << daughter2->pdgId() << "\tStatus is: " << daughter2->status() << std::endl;
+  // 	  mother1 = &part;
+  // 	  boson = mother1;
+  // 	  if(!boson || !daughter1 || !daughter2){
+  // 	    std::cout<<"boson::0x"<<std::hex<<boson<<std::dec<<std::endl;
+  // 	    std::cout<<"daughter1::0x"<<std::hex<<daughter1<<std::dec<<std::endl;
+  // 	    std::cout<<"daughter2::0x"<<std::hex<<daughter2<<std::dec<<std::endl;
+  // 	  }
+
+  // 	}
+  //   }
+      
+  
+
+
+  //   if(debug_ > 2){
+  //     std::cout << "Eta of daughter1 is: " << daughter1->eta() << "\n";
+  //     std::cout << "Eta of daughter2 is: " << daughter2->eta() << "\n";
+  //   }
+
+  //     if(boson){
+  // 	bosonId_=boson->pdgId();
+  // 	bosonP4_.fill(boson->p4());
+	
+  // 	h_Zmass->Fill(boson->mass());
+  // 	h_Zpt->Fill(boson->pt());
+  // 	h_Zeta ->Fill(boson->eta());
+  // 	h_Zphi ->Fill(boson->phi());
+  // 	h_Zcharge->Fill(boson->charge());
+  //     }
+
+  //   if(daughter1->charge() > 0 && daughter2->charge() < 0){
+  //     muMinus = daughter2;
+  //     muPlus = daughter1;
+  //   }
+  //   else if(daughter1->charge() < 0 && daughter2->charge() > 0){
+  //     muMinus = daughter1;
+  //     muPlus = daughter2;
+  //   }
+
+  //   else return;
+
+  //   if(debug_ > 0){  
+  //     std::cout<< "\n\nDaughter1: pId = " << muMinus->pdgId() << "\tpT = " << muMinus->pt() << "\teta = " 
+  // 	       << muMinus->eta() << "\tphi = " << muMinus->phi() << "\tq = " << muMinus->charge();
+  //     std::cout<< "\nDaughter2: pId = " << muPlus->pdgId() << "\tpT = " << muPlus->pt() << "\teta = " << muPlus->eta() << "\tphi = " << 
+  // 	muPlus->phi() << "\tq = " << muPlus->charge();
+  //   }
+    
+  // muMinusP4_.fill(muMinus->p4());
+  //   muMinusPID_=muMinus->pdgId();
+  //   if(debug_ > 0){  
+  //     std::cout<< "\n\nDaughter1: pId = " << muMinus->pdgId() << "\tpT = " << muMinus->pt() << "\teta = " 
+  // 	       << muMinus->eta() << "\tphi = " << muMinus->phi() << "\tq = " << muMinus->charge();
+  //   std::cout<< "\nDaughter2: pId = " << muPlus->pdgId() << "\tpT = " << muPlus->pt() << "\teta = " << muPlus->eta() << "\tphi = " << 
+  //     muPlus->phi() << "\tq = " << muPlus->charge();
+  //   }
+
+
+  //   h_muMinusmass->Fill(muMinus->mass());
+  //   h_muMinuspt->Fill(muMinus->pt());
+  //   h_muMinuseta->Fill(muMinus->eta());
+  //   h_muMinusphi->Fill(muMinus->phi());
+  //   h_muMinuscharge->Fill(muMinus->charge());
+  //   h_thetaMuMinus->Fill(muMinus->theta());  
+  
+  //   muPlusP4_.fill(muPlus->p4());
+  //   muPlusPID_=muPlus->pdgId();
+
+  //   h_muPlusmass->Fill(muPlus->mass());
+  //   h_muPluspt->Fill(muPlus->pt());
+  //   h_muPluseta->Fill(muPlus->eta());
+  //   h_muPlusphi->Fill(muPlus->phi());
+  //   h_muPluscharge->Fill(muPlus->charge());
+  //   h_thetaMuPlus->Fill(muPlus->theta());    
+
+  //   muPlusKPlus = (1/sqrt(2))*(muPlus->energy() + muPlus->pz());
+  //   muPlusKMinus = (1/sqrt(2))*(muPlus->energy() - muPlus->pz());
+  //   muMinusKPlus = (1/sqrt(2))*(muMinus->energy() + muMinus->pz());
+  //   muMinusKMinus = (1/sqrt(2))*(muMinus->energy() - muMinus->pz());
+
+  //   invariantK = (muPlusKPlus*muMinusKMinus - muMinusKPlus*muPlusKMinus);
+  //   std::cout << "\n\nInvariantK is: " << invariantK << std::endl;
+
+  //   dimuon = muMinus->p4() + muPlus->p4();
+
+  //   dimuonPt =dimuon.pt();
+  //   dimuonPz = dimuon.pz();
+  //   pseudorapidity = asinh(dimuonPz/dimuonPt);
+  //   dimuonPx = dimuon.px();
+  //   dimuonPy = dimuon.py();
+  //   Phi = acos(dimuonPx/dimuonPt);
+  //   dimuonQ = sqrt(pow(dimuon.energy(),2) - pow(dimuon.pt(),2) - pow(dimuon.pz(),2));
+  //   std::cout << "\n\nDimuon Energy is: " << dimuon.energy() << std::endl << std::endl;
+    
+  //   double denominatorTheta, denominatorPhi1, denominatorPhi2, numeratorPhi1, numeratorPhi2;
+  //   double denominatorPhi, numeratorPhi;
+  //   double deltaX, deltaY;
+  //   double invariantMass;
+
+  //   denominatorTheta = dimuonQ*sqrt(pow(dimuonQ, 2) + pow(dimuon.pt(), 2));
+  //   thetaCos = (dimuon.pz()/fabs(dimuon.pz()))*(2/denominatorTheta)*invariantK;
+  //   thetaCS = acos(thetaCos);
+
+  //   denominatorPhi1 = dimuonQ*dimuon.pt();
+  //   numeratorPhi1 = sqrt(pow(dimuonQ, 2) + pow(dimuon.pt(), 2));
+  //   deltaX = muPlus->px() - muMinus->px();
+  //   deltaY = muPlus->py() - muMinus->py();
+  //   denominatorPhi2 = ((deltaX*dimuon.px()) + (deltaY*dimuon.py()));
+  //   numeratorPhi2 = ((deltaX*dimuon.py()) + (deltaY*dimuon.px()));
+  //   numeratorPhi = numeratorPhi1*numeratorPhi2;
+  //   denominatorPhi = denominatorPhi1 * denominatorPhi2;
+
+  //   phiTan = numeratorPhi/denominatorPhi;
+  //   phiCS = atan(phiTan);
+
+
+  //   mu1Energy = muPlus->energy();
+  //   mu2Energy = muMinus->energy();
+  //   std::cout << "\n\nmuon Energies are: " << mu1Energy << "__" << mu2Energy << std::endl << std::endl;
+  //   std::cout << "\ndimuon px_py_pz are: "<< dimuonPx << "_" << dimuonPy << "_" << dimuonPz << std::endl;
  
-    cosTheta=thetaCos;
-    tanPhi=phiTan;
-    csTheta=thetaCS;
-    csPhi=phiCS;
+  //   cosTheta=thetaCos;
+  //   tanPhi=phiTan;
+  //   csTheta=thetaCS;
+  //   csPhi=phiCS;
 
 
-    h_cosTheta->Fill(thetaCos);
-    h_csTheta->Fill(thetaCS);
-    h_tanPhi->Fill(phiTan);
-    h_csPhi->Fill(phiCS);
+  //   h_cosTheta->Fill(thetaCos);
+  //   h_csTheta->Fill(thetaCS);
+  //   h_tanPhi->Fill(phiTan);
+  //   h_csPhi->Fill(phiCS);
 
     
 
-    std::cout << "\n\n\ncos(Theta_CS) = " << thetaCos << "\tThetaCS = " << thetaCS << std::endl;
-    std::cout << "\n\n\nTan(phi_CS) = " << phiTan << "\tPhiCS = " << phiCS << std::endl;
+  //   std::cout << "\n\n\ncos(Theta_CS) = " << thetaCos << "\tThetaCS = " << thetaCS << std::endl;
+  //   std::cout << "\n\n\nTan(phi_CS) = " << phiTan << "\tPhiCS = " << phiCS << std::endl;
 
-    invariantMass = sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi()))));
-
-
-    if(thetaCos < 0.0){
-      h_cosThetaMinusInvariantMass->Fill(invariantMass);
-      mCosThetaMinus = invariantMass;
-    }
-    else{
-      h_cosThetaPlusInvariantMass->Fill(invariantMass);
-      mCosThetaPlus = invariantMass;
-    }
+  //   invariantMass = sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi()))));
 
 
-    h_dphi->Fill(TVector2::Phi_mpi_pi(muMinus->phi()- muPlus->phi()));
-    h_dtheta->Fill(TVector2::Phi_mpi_pi(muMinus->theta()- muPlus->theta()));
-    h_dr->Fill(reco::deltaR(muMinus->p4(),muPlus->p4()));
-    h_massInvar->Fill(sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi())))));
-    h_dimuonPt->Fill(dimuonPt);
-    h_dimuonEta->Fill(pseudorapidity);
-    h_dimuonPhi->Fill(Phi);
-    h2_phi1_vs_phi2->Fill(muMinus->phi(),muPlus->phi());  
-    h2_eta1_vs_eta2->Fill(muMinus->eta(),muPlus->eta());
-    h2_pt1_vs_pt2->Fill(muMinus->pt(),muPlus->pt());
+  //   if(thetaCos < 0.0){
+  //     h_cosThetaMinusInvariantMass->Fill(invariantMass);
+  //     mCosThetaMinus = invariantMass;
+  //   }
+  //   else{
+  //     h_cosThetaPlusInvariantMass->Fill(invariantMass);
+  //     mCosThetaPlus = invariantMass;
+  //   }
+
+
+  //   h_dphi->Fill(TVector2::Phi_mpi_pi(muMinus->phi()- muPlus->phi()));
+  //   h_dtheta->Fill(TVector2::Phi_mpi_pi(muMinus->theta()- muPlus->theta()));
+  //   h_dr->Fill(reco::deltaR(muMinus->p4(),muPlus->p4()));
+  //   h_massInvar->Fill(sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi())))));
+  //   h_dimuonPt->Fill(dimuonPt);
+  //   h_dimuonEta->Fill(pseudorapidity);
+  //   h_dimuonPhi->Fill(Phi);
+  //   h2_phi1_vs_phi2->Fill(muMinus->phi(),muPlus->phi());  
+  //   h2_eta1_vs_eta2->Fill(muMinus->eta(),muPlus->eta());
+  //   h2_pt1_vs_pt2->Fill(muMinus->pt(),muPlus->pt());
 
 
     //  }
 
   std::cout << "\n\n===========================================================================================================" << std::endl;
   tree_->Fill();  
+}
+
+void Dimuon::gammavsSort(std::vector<const reco::Candidate*> fullGammavs, std::vector<const reco::Candidate*> &emptyGammavs,
+			 std::vector<const reco::Candidate*> &eleSet, std::vector<const reco::Candidate*> &notGammavs,
+			 std::vector<const reco::Candidate*> &fullGammavsRef){
+  for(auto &gammav : fullGammavs){
+    if(abs(gammav->daughter(0)->pdgId()) == 11){ // first daughter sorting for gammavs
+      eleSet.push_back(gammav->daughter(0));
+    }
+    else if(abs(gammav->daughter(0)->pdgId()) == 4900022){
+      emptyGammavs.push_back(gammav->daughter(0));
+    }
+    else{
+      notGammavs.push_back(gammav->daughter(0));
+    }
+    
+    if(abs(gammav->daughter(1)->pdgId()) == 11){ // second daughter sorting for gammavs
+      eleSet.push_back(gammav->daughter(0));
+    }
+    else if(abs(gammav->daughter(1)->pdgId()) == 4900022){
+      emptyGammavs.push_back(gammav->daughter(0));
+    }
+    else{
+      notGammavs.push_back(gammav->daughter(1));
+    }  
+  }
+  fullGammavsRef.clear();
+}
+
+void Dimuon::notGammavsSort(std::vector<const reco::Candidate*> fullNotGammavs, std::vector<const reco::Candidate*> &emptyNotGammavs,
+			    std::vector<const reco::Candidate*> &eleSet, std::vector<const reco::Candidate*> &gammavs,
+			    std::vector<const reco::Candidate*> &fullNotGammavsRef){
+  for(auto &notGammav : fullNotGammavs){
+    if(notGammav->pdgId() == 4900002 || notGammav->pdgId() == 4900004){
+      continue;
+    }
+    else{
+      if(notGammav->numberOfDaughters() == 2){
+	if(abs(notGammav->daughter(0)->pdgId()) == 4900022){
+	  gammavs.push_back(notGammav->daughter(0));
+	}
+	else{
+	  emptyNotGammavs.push_back(notGammav->daughter(0));
+	}
+	if(abs(notGammav->daughter(1)->pdgId()) == 4900022){
+	  gammavs.push_back(notGammav->daughter(1));
+	}
+	else{
+	  emptyNotGammavs.push_back(notGammav->daughter(1));
+	}
+      }
+      else{
+	std::cout << "Particle " << notGammav->pdgId() << " doesn't have 2 daughter" << std::endl;
+      }
+    }
+  }
+  fullNotGammavsRef.clear();
 }
 
 bool Dimuon::isBoson(int pid)

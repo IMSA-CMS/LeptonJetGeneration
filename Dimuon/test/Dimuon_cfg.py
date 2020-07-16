@@ -19,17 +19,18 @@ process.source = cms.Source("PoolSource",
 #                                'file:/afs/cern.ch/user/s/sturdy/work/public/WSUAnalysis/DiLeptons/CIToMuMu_M0_D0_L20000_Des_13TeV_pythia8_GEN_0_7.root',
                                 #'file:%s/DYToMuMu_M0_D0_13TeV_pythia8_GEN_0.root'%(filedir),
 #                                'root://cmsxrootd.fnal.gov//store/mc/Summer12_DR53X/CIToMuMu_Con_Lambda-11_M-300_TuneZ2star_8TeV-pythia6/AODSIM/PU_S10_START53_V19E-v1/10000/1248C92B-8FF6-E211-A6E8-7845C4FC371F.root',
-                                'file:/afs/cern.ch/work/s/szaleski/private/CMSSW_744_MCGen/src/GenStudy/Dimuon/test/CIToMuMu_M300_D0_L13000_8TeV_pythia8_GEN_17_Sep9.root',
+                                #'file:/afs/cern.ch/work/s/szaleski/private/CMSSW_744_MCGen/src/GenStudy/Dimuon/test/CIToMuMu_M300_D0_L13000_8TeV_pythia8_GEN_17_Sep9.root',
 #                                'root://cmsxrootd.fnal.gov//store/user/szaleski/DYToMuMu/M200_13TeV_pythia8_GEN/150814_161922/0000/CIToMuMu_M0_D0_L1000_13TeV_pythia8_GEN_0_1.root',
  #                               'file:%s/DYToMuMu_M0_D200_13TeV_pythia8_GEN_25.root'%(filedir),
+                                 'file:/uscms/home/mhuang2/nobackup/pythia/CMSSW_10_6_4/src/GenStudy/Dimuon/test/CITo_PID13_M-1_D0_L1000_LL0_LR_0_RR_0_13TeV_pythia8_GEN.root'
                                 )
                             )
 
 from GenStudy.Dimuon.Dimuon_cfi import *
 process.Dimuon=dimuon.clone()
-process.Dimuon.isCI=False
+#process.Dimuon.isCI=False
 process.Dimuon.debug=False
-process.Dimuon.status=23
+#process.Dimuon.status=23
 
 process.TFileService = cms.Service("TFileService",
                                    fileName = cms.string("Pythia6_Sep21_CI_L13000_8TeV_Sep21.root")
