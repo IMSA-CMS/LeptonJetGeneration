@@ -78,6 +78,9 @@ private:
 			      std::vector<const reco::Candidate*> &eleSet, std::vector<const reco::Candidate*> &gammavs,
 			      std::vector<const reco::Candidate*> &fullNotGammavsRef);
 
+  int leptonJetReco(std::vector<const reco::Candidate*> eles);
+  const reco::Candidate* findBiggestPT(std::vector<const reco::Candidate*> leptons, std::vector<const reco::Candidate*> &smallerPTLeptons);
+
   struct P4Struct {
     float energy,et,eta,phi,pt,mass,theta;
     void fill(const math::XYZTLorentzVector& p4){
@@ -93,7 +96,7 @@ private:
     }
     void clear(){energy=-999;et=-999;eta=-999;phi=-0;pt=-999;mass=-999;theta=-999;}
     static std::string contents(){return "energy/F:et:eta:phi:pt:mass:theta";}
-  }; 
+  };
 
   TTree* tree_;
 
@@ -105,6 +108,7 @@ private:
   TH1F *h_eleBiggestPT, *h_eleBiggestPTEta, *h_eleBiggestPTPhi;
   TH1F *h_neutralinoNum;
   TH1F *h_eleSetPT, *h_eleSetE, *h_eleSetSigmaPhi, *h_eleSetSigmaEta;
+  TH1F *h_recoLeptonJetNum;
   //  TH1F *h_nuEleFromGammavNum, *h_nuEleFromGammavPT;
 
   //  TH1F *h_gammavMissingDaughters;
@@ -167,6 +171,8 @@ void Dimuon::beginJob()
   h_eleSetE = fs->make<TH1F>("eleSetE", "The total energy of a set of all the electrons that came from the same neutralino", 100, 0, 400);
   h_eleSetSigmaPhi = fs->make<TH1F>("eleSetSigmaPhi", "The standard deviation of the phis in a set of all the electrons that came from the same neutralino", 100, -0.1, 3.2);
   h_eleSetSigmaEta = fs->make<TH1F>("eleSetSigmaEta", "The standard deviation of the etas in a set of all the electrons that came from the same neutralino", 150, -.5, 2.5);
+
+  h_recoLeptonJetNum = fs->make<TH1F>("recoLeptonJetNum", "The number of lepton jets that there appear to be based off of only observing electrons and their angle", 14, 0, 14);
 
   //  h_nuEleFromGammavNum = fs->make<TH1F>("nuEleFromGammavNum", "Number of electron neutralinos from dark photons", 14, 0, 14);
   //  h_nuEleFromGammavPT = fs->make<TH1F>("nuEleFromGammavPT", "PT of electron neutralinos from dark photons", 100, 0, 400);
@@ -310,6 +316,8 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   // if both electrons come from the same dark photon, find invariant mass, delta phi, delta r, 
   // eta phi for biggest pt ele
+
+  std::vector<const reco::Candidate*> recoEles;
   
   for(auto &part : genParts){
     if(part.pdgId() == 4900022){ // if particle is a dark photon
@@ -319,7 +327,10 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       if(part.numberOfDaughters() == 2){ // if particle has two daughters
 	
 	// if both daughters are either electron or positron
-	if(abs(part.daughter(0)->pdgId()) == 11 && abs(part.daughter(1)->pdgId()) == 11){
+	if(abs(part.daughter(0)->pdgId()) == 11 && abs(part.daughter(1)->pdgId()) == 11 && part.daughter(0)->numberOfDaughters() == 0 && part.daughter(1)->numberOfDaughters() == 0){
+	  recoEles.push_back(part.daughter(0)); // store electrons for reconstruction later
+	  recoEles.push_back(part.daughter(1));
+
 	  h_eleFromGammavPT->Fill(part.daughter(0)->pt()); // enter the pt of the electrons
 	  h_eleFromGammavPT->Fill(part.daughter(1)->pt());
 
@@ -421,6 +432,12 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     h_eleFromGammavNum->Fill(eles.size()); // fill the number of electrons for this event
     h_neutralinoNum->Fill(numNeutralinos); // fill the number of neutralinos for this event
   }
+
+  // reconstructing electrons
+  if(!recoEles.empty()){
+    h_recoLeptonJetNum->Fill(leptonJetReco(recoEles));
+  }
+
   const reco::Candidate* bigPTEle;
   double biggestElePt = 0;
 
@@ -697,6 +714,64 @@ void Dimuon::notGammavsSort(std::vector<const reco::Candidate*> fullNotGammavs, 
     }
   }
   fullNotGammavsRef.clear();
+}
+
+
+int Dimuon::leptonJetReco(std::vector<const reco::Candidate*> leptons){
+  double leptonJets = 0;
+  double deltaRCutoff = 0.5;
+
+  // find the lepton with the highest pt
+  std::vector<const reco::Candidate*> smallerPTLeptons;
+  const reco::Candidate* biggestPTLepton = findBiggestPT(leptons, smallerPTLeptons); 
+  
+
+  // find the other leptons that are in the same jet
+  std::vector<const reco::Candidate*> smallerPTLeptons2;
+  while(!smallerPTLeptons.empty()){
+    std::cout << smallerPTLeptons.size();
+    bool isJet = false;
+    for(auto &lepton : smallerPTLeptons){
+      double deltaEta = biggestPTLepton->eta() - lepton->eta();
+      double deltaPhi = biggestPTLepton->phi() - lepton->phi();
+      
+      double deltaR = std::sqrt((deltaEta)*(deltaEta)-(deltaPhi)*(deltaPhi));
+
+      if(deltaR > deltaRCutoff){
+	smallerPTLeptons2.push_back(lepton);
+      }
+      else{
+	isJet = true;
+      }
+    }
+    if(isJet){
+      leptonJets++;
+    }
+    smallerPTLeptons.clear();
+
+    biggestPTLepton = findBiggestPT(smallerPTLeptons2, smallerPTLeptons);
+  }
+    
+  return leptonJets;
+}
+
+const reco::Candidate* Dimuon::findBiggestPT(std::vector<const reco::Candidate*> leptons, std::vector<const reco::Candidate*> &smallerPTLeptons){
+  double biggestPT = 0;
+  const reco::Candidate* biggestPTLepton;
+
+  for(auto &lepton : leptons){
+    if(lepton->pt() > biggestPT){
+      if(biggestPT != 0){
+	smallerPTLeptons.push_back(biggestPTLepton);
+      }
+      biggestPTLepton = lepton;
+      biggestPT = lepton->pt();
+    }
+    else{
+      smallerPTLeptons.push_back(lepton);
+    }
+  }
+  return biggestPTLepton;
 }
 
 bool Dimuon::isBoson(int pid)
