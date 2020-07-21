@@ -1,4 +1,3 @@
-// 7/19/2020 Dimuon.cc doesn't work right now, so please don't copy it right now.
 # Pythia8-dilepton
 
 This packages is designed to perform GEN-only private MC productions using the CMSSW Pythia8 release that is included in the working CMSSW release. It also includes basic TTree-making files and simplistic histogramming that is intended primarly as a starting point to springboard to do whatever specific plotting is desired.
