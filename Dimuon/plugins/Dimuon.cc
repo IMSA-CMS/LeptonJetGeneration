@@ -34,10 +34,10 @@ Implementation:
 #include "SimDataFormats/GeneratorProducts/interface/GenRunInfoProduct.h"
 #include <vector>
 #include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/Math/interface/normalizedPhi.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
-
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 //
 // class declaration
@@ -81,6 +81,9 @@ private:
   int leptonJetReco(std::vector<const reco::Candidate*> eles);
   const reco::Candidate* findBiggestPT(std::vector<const reco::Candidate*> leptons, std::vector<const reco::Candidate*> &smallerPTLeptons);
 
+  const void printGenParticleCollection(const reco::GenParticleCollection& genParts);
+  const int getIndexOf(const reco::Candidate* part, const reco::GenParticleCollection& genParts);
+
   struct P4Struct {
     float energy,et,eta,phi,pt,mass,theta;
     void fill(const math::XYZTLorentzVector& p4){
@@ -100,29 +103,26 @@ private:
 
   TTree* tree_;
 
-
+  // Neutralino and dark photon histograms
+  TH1F *h_neutralinoNum, *h_chiR;
   TH1F *h_darkPhotonNum, *h_darkPhotonPT;
+
+  // Electron analysis histograms
   TH1F *h_eleFromGammavNum, *h_eleFromGammavPT;
   TH1F *h_elePhi, *h_eleEta, *h_eleR, *h_eleInvariantMass;
   TH1F *h_eleDeltaPhi, *h_eleDeltaEta;
+
+  // High pT electron histograms
+  TH1F *h_30GevOrMoreLeptons;
   TH1F *h_eleBiggestPT, *h_eleBiggestPTEta, *h_eleBiggestPTPhi;
-  TH1F *h_neutralinoNum;
+
+  // Electron set analysis histograms
   TH1F *h_eleSetPT, *h_eleSetE, *h_eleSetSigmaPhi, *h_eleSetSigmaEta;
-  TH1F *h_recoLeptonJetNum;
-  //  TH1F *h_nuEleFromGammavNum, *h_nuEleFromGammavPT;
 
-  //  TH1F *h_gammavMissingDaughters;
-  //  TH1F *h_gammavExtraDaughters; // make sure the dark photon only has two daughters
-
-  // TH1F * h_Zmass, *h_Zpt,*h_Zeta,*h_Zphi,*h_Zcharge;
-  // TH1F *h_muMinusmass,*h_muMinuspt,*h_muMinuseta,*h_muMinusphi,*h_muMinuscharge;
-  // TH1F *h_muPlusmass,*h_muPluspt,*h_muPluseta,*h_muPlusphi,*h_muPluscharge;
-  // TH1F *h_dphi,*h_dtheta, *h_dr, *h_thetaMuMinus,*h_thetaMuPlus;
-  // TH1F *h_massInvar, *h_dimuonPt, *h_dimuonEta, *h_dimuonPhi;
-  // TH1F *h_cosTheta, *h_tanPhi, *h_csTheta, *h_csPhi;
-  // TH1F *h_cosThetaPlusInvariantMass, *h_cosThetaMinusInvariantMass;
-
-  // TH2F *h2_pt1_vs_pt2,*h2_eta1_vs_eta2,*h2_phi1_vs_phi2;
+  // Reconstruction histograms
+  TH1F *h_recoLeptonJetNum, *h_actualJetNum, *h_jetNumDiff;
+  TH1F *h_recoLeptonNumPerEvent, *h_recoLeptonNumInOneJetEvents;
+  TH1F *h_notInJetLepton;
 
   P4Struct bosonP4_; // as a sanity check we have the right event...
   P4Struct muMinusP4_;
@@ -148,76 +148,46 @@ private:
 void Dimuon::beginJob()
 {
   edm::Service<TFileService> fs;
+  // Neutralino histograms
+  h_neutralinoNum = fs->make<TH1F>("neutralinoNum", "Number of neutralinos per event", 14, 0, 14);
+  h_chiR = fs->make<TH1F>("chiR", "delta r of the two neutralinos in the event", 100, 0, 10);
+
+  // Dark photon histograms
   h_darkPhotonNum = fs->make<TH1F>("darkPhotonNum", "Amount of dark photons per event", 15, -.5, 14.5);
   h_darkPhotonPT = fs->make<TH1F>("darkPhotonPT", "Dark Photon PT", 100, 0, 400);
 
+  // Electrons that came from a dark photon histograms
   h_eleFromGammavNum = fs->make<TH1F>("eleFromGammavNum", "Number of electrons from dark photons in each event", 14, 0, 14);
   h_eleFromGammavPT = fs->make<TH1F>("eleFromGammavPT", "PT of electrons from dark photons", 100, 0, 400);
+
+  // Electron histograms
   h_elePhi = fs->make<TH1F>("elePhi", "Phi of electrons", 100, -3.2, 3.2);
   h_eleEta = fs->make<TH1F>("eleEta", "Eta of electrons", 100, -10, 10);
   h_eleInvariantMass = fs->make<TH1F>("eleInvariantMass", "Invariant mass of electrons", 100, -0.5, 1.5);
-
   h_eleDeltaPhi = fs->make<TH1F>("eleDeltaPhi", "difference in phi between two electrons that came from the same dark photon", 100, -10, 10);
   h_eleDeltaEta = fs->make<TH1F>("eleDeltaEta", "delta eta of electrons from the same dark photon", 100, -10, 10);
-  h_eleR = fs->make<TH1F>("eleR", "distance", 100, -0.5, 10);
+  h_eleR = fs->make<TH1F>("eleR", "Distance between a pair of two electrons that originated from the same dark photon in phi-eta space", 300, -0.1, 2.9);
 
-  h_eleBiggestPT = fs->make<TH1F>("eleBiggestPT", "PT of electron with biggest PT", 100, 0, 400);
+  // High pT electron histograms
+  h_30GevOrMoreLeptons = fs->make<TH1F>("30GevOrMoreLeptons", "The number of events that have a lepton 30 gev or greater", 2, 0, 2);
+  h_eleBiggestPT = fs->make<TH1F>("eleBiggestPT", "PT of the electron with the biggest PT in its event", 100, 0, 400);
   h_eleBiggestPTEta = fs->make<TH1F>("eleBiggestPTEta", "Eta of electron with biggest PT", 100, -10, 10);
   h_eleBiggestPTPhi = fs->make<TH1F>("eleBigestPTPhi", "Phi of electron with biggest PT", 100, -3.2, 3.2);
 
-  h_neutralinoNum = fs->make<TH1F>("neutralinoNum", "Number of neutralinos per event", 14, 0, 14);
-
+  // Set of electrons that came from the same neutralino histograms
   h_eleSetPT = fs->make<TH1F>("eleSetPT", "The total PT of a set of all the electrons that came from the same neutralino", 100, 0, 400);
   h_eleSetE = fs->make<TH1F>("eleSetE", "The total energy of a set of all the electrons that came from the same neutralino", 100, 0, 400);
   h_eleSetSigmaPhi = fs->make<TH1F>("eleSetSigmaPhi", "The standard deviation of the phis in a set of all the electrons that came from the same neutralino", 100, -0.1, 3.2);
   h_eleSetSigmaEta = fs->make<TH1F>("eleSetSigmaEta", "The standard deviation of the etas in a set of all the electrons that came from the same neutralino", 150, -.5, 2.5);
 
+  // Reconstruction and reconstruction checking histograms
   h_recoLeptonJetNum = fs->make<TH1F>("recoLeptonJetNum", "The number of lepton jets that there appear to be based off of only observing electrons and their angle", 15, -0.5, 14.5);
-
-  //  h_nuEleFromGammavNum = fs->make<TH1F>("nuEleFromGammavNum", "Number of electron neutralinos from dark photons", 14, 0, 14);
-  //  h_nuEleFromGammavPT = fs->make<TH1F>("nuEleFromGammavPT", "PT of electron neutralinos from dark photons", 100, 0, 400);
-
-  //  h_gammavMissingDaughters = fs->make<TH1F>("gammavMissingDaughters", "Number of dark photon with less than two daughters", 14, 0, 14);
-  //  h_gammavExtraDaughters = fs->make<TH1F>("gammavExtraDaughters", "Numbers of dark photons with more than two daughters", 14, 0, 14);
-
-  // h_Zmass = fs->make<TH1F>("Zmass" , "m", 1000, 0., 600);
-  // h_Zpt  = fs->make<TH1F>( "Zpt"  , "p_{t}", 500,  0., 2500. );
-  // h_Zeta = fs->make<TH1F>( "Zeta" , "#eta" , 100, -10., 10.    );
-  // h_Zphi = fs->make<TH1F>( "Zphi" , "#phi" , 100,  -3.20, 3.20   );
-  // h_Zcharge = fs->make<TH1F>( "Zcharge" , "Q" ,3,  -1.5, 1.5    );
-  // h_muMinusmass = fs->make<TH1F>("muMinusmass" , "m", 1000, 0., 500);
-  // h_muMinuspt  = fs->make<TH1F>( "muMinuspt"  , "p_{t}", 500,  0., 2500. );
-  // h_muMinuseta = fs->make<TH1F>( "muMinuseta" , "#eta" , 100, -5., 5.    );
-  // h_muMinusphi = fs->make<TH1F>( "muMinusphi" , "#phi" , 100,  -3.15, 3.15   );
-  // h_muMinuscharge = fs->make<TH1F>( "muMinuscharge" , "Q" ,3,  -1.5, 1.5    );
-
-  // h_muPlusmass = fs->make<TH1F>("muPlusmass" , "m", 1000, 0., 500);
-  // h_muPluspt  = fs->make<TH1F>( "muPluspt"  , "p_{t}", 500,  0., 2500. );
-  // h_muPluseta = fs->make<TH1F>( "muPluseta" , "#eta" , 100, -5., 5.    );
-  // h_muPlusphi = fs->make<TH1F>( "muPlusphi" , "#phi" , 100,  -3.15, 3.15   );
-  // h_muPluscharge = fs->make<TH1F>( "muPluscharge" , "Q" ,3,  -1.5, 1.5    );
-
-  // h_dphi = fs->make<TH1F>("delta phi", "#delta #phi", 100, -3.15, 3.15 );       
-  // h_dtheta = fs->make<TH1F>("delta theta", "#delta #theta", 100, -3.15, 3.15); 
-  // h_dr = fs->make<TH1F>("delta r", "#delta r", 100, 0, 10);
-  // h_thetaMuMinus = fs->make<TH1F>("theta muMinus", "#theta", 100, -3.15, 3.15);      
-  // h_thetaMuPlus = fs->make<TH1F>("theta muPlus", "#theta", 100, -3.15, 3.15); 
-  // h_massInvar = fs->make<TH1F>("Invariant mass", "Invariant mass", 350, 0., 3500.);
-  // h_dimuonPt = fs->make<TH1F>("Dimuon Pt", "Dimuon Pt", 500, 0, 2500);
-  // h_dimuonEta = fs->make<TH1F>("Dimuon eta", "Dimuon #eta", 100, -5, 5);
-  // h_dimuonPhi = fs->make<TH1F>("Dimuon Phi", "Dimuon #phi", 100, -3.15, 3.15);
-
-  // h_cosTheta = fs->make<TH1F>("cosTheta", "cos #theta", 100, -1.01, 1.01);
-  // h_tanPhi = fs->make<TH1F>("tanPhi", "tan #phi", 100, -1000.0, 1000.0);
-  // h_csTheta = fs->make<TH1F>("csTheta", "#theta_{CS}", 100, -3.15, 3.15);
-  // h_csPhi = fs->make<TH1F>("csPhi", "#phi_{CS}", 100, -3.15, 3.15);
-  // h_cosThetaMinusInvariantMass = fs->make<TH1F>("InvariantMass_cosThetaMinus", "InvariantMass_cosThetaMinus", 350, 0., 3500.);
-  // h_cosThetaPlusInvariantMass = fs->make<TH1F>("InvariantMass_cosThetaPlus", "InvariantMass_cosThetaPlus", 350, 0., 3500.);
-
-  // h2_pt1_vs_pt2   = fs->make<TH2F>( "pt1_vs_pt2"   , "p_{t,1} vs. p_{t,2}"   , 500,  0., 2500., 500,  0., 2500.);
-  // h2_eta1_vs_eta2 = fs->make<TH2F>( "eta1_vs_eta2" , "#eta_{1} vs. #eta_{2}" , 100, -5., 5.   , 100, -5., 5.   );
-  // h2_phi1_vs_phi2 = fs->make<TH2F>( "phi1_vs_phi2" , "#phi_{1} vs. #phi_{2}" , 100,  -3.15, 3.15  , 100,  -3.15, 3.15  );
-
+  h_actualJetNum = fs->make<TH1F>("actualJetNum", "The actual number of lepton jets in the event, based on whether neutrinos produced electrons", 15, -0.5, 14.5);
+  h_jetNumDiff = fs->make<TH1F>("jetNumDiff", "The difference between the number of lepton jets reconstructed, and how many lepton jets there actually were", 5, 0, 5);
+  h_recoLeptonNumPerEvent = fs->make<TH1F>("recoLeptonNumPerEvent", "The number of leptons being reconstructed in an event", 15, 0, 15);
+  h_recoLeptonNumInOneJetEvents = fs->make<TH1F>("recoLeptonNumInOneJetEvents", "The number of leptons in events where one jet is reconstructed", 15, 0, 15);
+  h_notInJetLepton = fs->make<TH1F>("notInJetLepton", "The number of leptons that didn't get put into a jet in each event", 15, 0, 15);
+ 
   tree_= fs->make<TTree>("pdfTree","PDF Tree");
   // tree_->Branch("evtId",&evtId_,EventId::contents().c_str());
   tree_->Branch("bosonP4",&bosonP4_,P4Struct::contents().c_str());
@@ -281,7 +251,6 @@ Dimuon::~Dimuon()
 void
 Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-
   using namespace edm;
   edm::Handle<reco::GenParticleCollection> genPartsHandle;
   iEvent.getByToken(genPartsToken_,genPartsHandle);
@@ -294,89 +263,160 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   muMinusPID_=0;
   muPlusPID_=0;
 
-  //  const reco::Candidate* boson;
-  //  const reco::Candidate* mother1;
-  //  const reco::Candidate* mother2;
-  //  const reco::Candidate* muMinus;
-  //  const reco::Candidate* muPlus;
   math::XYZTLorentzVectorD dimuon;
-  //  double dimuonPx, dimuonPy, dimuonPz, dimuonPt, pseudorapidity, Phi, mu1Energy, mu2Energy, dimuonQ;
-  //  double thetaCos, thetaCS, phiTan, phiCS;
-  //  double muPlusKPlus, muPlusKMinus, muMinusKPlus, muMinusKMinus, invariantK;
 
   double numDarkPhotons = 0;
   double numNeutralinos = 0;
 
-  std::vector<const reco::Candidate*> eles;
-  std::vector<const reco::Candidate*> recoEles;
+  std::vector<const reco::Candidate*> eles;   // Analysis electron container
+  std::vector<const reco::Candidate*> recoEles;  // Reconstruction electron container
 
-  for(auto &part : genParts){
-    if(abs(part.pdgId()) == 11 && part.numberOfDaughters() == 0){
-      const reco::Candidate* mother = part.mother();
-      if(mother->daughter(0)->pdgId() == part.pdgId()){
-	recoEles.push_back(mother->daughter(0));
+  bool thirtyGevOrMoreLeptonExists = false;
+
+  const reco::Candidate* chi1;   // Variable to place first neutralino while looking for the second
+  bool chi1Initialized = false;
+
+  int actualJetNum = 0;
+
+  for(auto &part : genParts) // for every particle (part) in this event (genParts)
+  {
+    // Neutralino delta r calculations
+    if(abs(part.pdgId()) == 1000022 && part.numberOfDaughters() > 1) // if particle (part) is a neutralino and particle (part) has more than one daughter 
+    {
+      if(chi1Initialized)      // if the first neutralino has been found and stored
+      {
+        ROOT::Math::LorentzVector d1 = chi1->p4();
+	const reco::Candidate* chi2 = &part;
+        ROOT::Math::LorentzVector d2 = chi2->p4();
+	h_chiR->Fill(reco::deltaR(d1, d2));
       }
-      else if(mother->daughter(1)->pdgId() == part.pdgId()){
-	recoEles.push_back(mother->daughter(1));
+      else // else save the first neutralino
+      {
+	chi1 = &part;
+	chi1Initialized = true;
       }
     }
-    if(part.pdgId() == 4900022){ // if particle is a dark photon
-      numDarkPhotons++; // add one to the dark photon amount counter
-      h_darkPhotonPT->Fill(part.pt()); // note the PT in histogram
-      
-      if(part.numberOfDaughters() == 2){ // if particle has two daughters
+
+    // Counting events with electrons with a Gev >=30
+    if(part.numberOfDaughters() == 0 && abs(part.pdgId()) == 11 && part.pt() >= 30)
+    {
+      thirtyGevOrMoreLeptonExists = true;
+    }
+    
+    // Filling reconstruction electrons container
+    if(abs(part.pdgId()) == 11 && part.numberOfDaughters() == 0)
+    {
+      recoEles.push_back(&part);
+    }
+
+    // Electron and dark photon analysis
+    if(part.pdgId() == 4900022) // if particle (part) is a dark photon
+    {      
+      if(part.numberOfDaughters() == 2) // if particle (part) has two daughters
+      {
+	numDarkPhotons++;
+	h_darkPhotonPT->Fill(part.pt()); // Enter pT into histogram
 	
-	// if both daughters are either electron or positron and they have no daughters thus they are final state
-	if(abs(part.daughter(0)->pdgId()) == 11 && abs(part.daughter(1)->pdgId()) == 11 && part.daughter(0)->numberOfDaughters() == 0 && part.daughter(1)->numberOfDaughters() == 0){
-	  h_eleFromGammavPT->Fill(part.daughter(0)->pt()); // enter the pt of the electrons
-	  h_eleFromGammavPT->Fill(part.daughter(1)->pt());
+	const reco::Candidate* daughter1; // Container for final state electrons
+	const reco::Candidate* daughter2;
 
-	  eles.push_back(part.daughter(0)); // stick the electrons in a storage system for later use
-	  eles.push_back(part.daughter(1));
+	if(abs(part.daughter(0)->pdgId()) == 11 && abs(part.daughter(1)->pdgId()) == 11) // if both daughters of the dark photon (part) are electrons
+	{
+	  bool stillLooking = true;
+	  const reco::Candidate* checkNext; // Container for the next particle to be examined
+	  
+	  checkNext = part.daughter(0); // Set the first particle to be checked as first daughter of dark photon
+	  while(stillLooking) // while the final state electron coming from the first daughter hasn't been found
+	  {
+	    if(checkNext->numberOfDaughters() == 0) // if the particle being checked has no daughters
+	    {
+	      daughter1 = checkNext; // store this particle as the final state of the first daughter
+	      stillLooking = false;
+	    }
+	    else // else check the daughter of the currently being checked particle, next
+	    {
+	      checkNext = checkNext->daughter(0);
+	    }
+	  }
 
-	  h_elePhi->Fill(part.daughter(0)->phi()); // put the phi and eta of the two electrons into their histograms
-	  h_eleEta->Fill(part.daughter(0)->eta());
+	  // Finding final state particle of the second daughter of the dark photon
+	  stillLooking = true;
+	  checkNext = part.daughter(1);
+	  while(stillLooking)
+	  {
+	    if(checkNext->numberOfDaughters() == 0)
+	    {
+	      daughter2 = checkNext;
+	      stillLooking = false;
+	    }
+	    else
+	    {
+	      checkNext = checkNext->daughter(0);
+	    }
+	  }
 
-	  h_elePhi->Fill(part.daughter(1)->phi());
-	  h_eleEta->Fill(part.daughter(1)->eta());
-
-	  const reco::Candidate* daughter1 = part.daughter(0); // invariant mass, delta phi, delta eta, delta r calculations
-	  const reco::Candidate* daughter2 = part.daughter(1);
-
+	  // Calculations involving the two final state daughters of the dark photon
+	  h_eleFromGammavPT->Fill(daughter1->pt()); // Filling pT of electrons
+	  h_eleFromGammavPT->Fill(daughter2->pt());
+	  
+	  eles.push_back(daughter1); // Save the electrons for further analysis later
+	  eles.push_back(daughter2);
+	  
+	  h_elePhi->Fill(daughter1->phi()); // Filling phi and eta for both electrons
+	  h_eleEta->Fill(daughter1->eta());
+	  
+	  h_elePhi->Fill(daughter2->phi());
+	  h_eleEta->Fill(daughter2->eta());
+	  
 	  double invariantMass = sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi()))));
 	  h_eleInvariantMass->Fill(invariantMass);
 
 	  double deltaEta = daughter2->eta()-daughter1->eta();
-	  double deltaPhi = daughter2->phi()-daughter1->phi();
-
+	  double deltaPhi = reco::deltaPhi(daughter2->phi(), daughter1->phi());
+	  
 	  h_eleDeltaPhi->Fill(deltaPhi);
 	  h_eleDeltaEta->Fill(deltaEta);
 
-	  double deltaR = std::sqrt((deltaEta)*(deltaEta)-(deltaPhi)*(deltaPhi));
-	  h_eleR->Fill(deltaR);
+	  ROOT::Math::LorentzVector d1 = daughter1->p4();
+	  ROOT::Math::LorentzVector d2 = daughter2->p4();
+	  
+	  //double deltaR = std::sqrt((deltaEta)*(deltaEta)-(deltaPhi)*(deltaPhi));
+	  h_eleR->Fill(reco::deltaR(d1, d2));
 	}
+	else
+	{
+	  std::cout << "Dark photon daughters are not both electrons" << std::endl;
+	}
+      }
+      else
+      {
+	std::cout << "Dark photon doesn't have 2 daughters" << std::endl;
       }
     }
 
-    // lepton groups analysis leading to reconstruction
-    // more specifically sorting neutralino daughters as electron or not electron and then finding the standard deviation of the phi and eta for the electrons
+    // sorting neutralino daughters as electron or not electron and then finding the standard deviation of the phi and eta for the electrons
     std::vector<const reco::Candidate*> gammavs;
     std::vector<const reco::Candidate*> gammavs2;
     std::vector<const reco::Candidate*> notGammavs;
     std::vector<const reco::Candidate*> notGammavs2;
     std::vector<const reco::Candidate*> eleSet;
-    if(abs(part.pdgId() == 1000022)){ // if particle is a neutralino
-      numNeutralinos++; // count neutralino number
+    if(abs(part.pdgId()) == 1000022) // if particle is a neutralino
+    {
 
-      if(part.numberOfDaughters() == 2 && part.daughter(0)->pdgId() != 1000022 && part.daughter(1)->pdgId() != 1000022){ // if neutralino has two daughters and none of those are other neutralinos
+      if(part.numberOfDaughters() == 2 && part.daughter(0)->pdgId() != 1000022 && part.daughter(1)->pdgId() != 1000022) // if neutralino has two daughters and none of those are other neutralinos
+      {
+	//numNeutralinos++; // count neutralino number
 	// sorting neutralino daughters as gammav or not gammav for further analysis
-	if(part.daughter(0)->pdgId() == 4900022){ // if first daughter is a dark photon or not
+	if(part.daughter(0)->pdgId() == 4900022) // if first daughter is a dark photon or not
+	{	  
 	  gammavs.push_back(part.daughter(0));
 	}
-	else{
+	else
+	{
 	  notGammavs.push_back(part.daughter(0));
 	}
-	if(part.daughter(1)->pdgId() == 4900022){ // if second daughter is a dark photon or not
+	if(part.daughter(1)->pdgId() == 4900022) // if second daughter is a dark photon or not
+	{
 	  gammavs.push_back(part.daughter(1));
 	}
 	else{
@@ -390,6 +430,28 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       
       notGammavsSort(notGammavs, notGammavs2, eleSet, gammavs, notGammavs);
       notGammavsSort(notGammavs2, notGammavs, eleSet, gammavs, notGammavs2);
+    }
+
+    // starting from the neutralino, find out how many lepton jets were produced
+    // also store all the electrons from this jet into a collection for analysis
+    if(abs(part.pdgId()) == 1000022) // if particle is a neutralino
+    {
+      if(part.numberOfDaughters() == 2 && part.daughter(0)->pdgId() != 1000022 && part.daughter(1)->pdgId() != 1000022) // if neutralino has two daughters and none of those are other neutralinos
+      {
+	numNeutralinos++;
+	// std::cout << "First daughter is " << part.daughter(0)->pdgId() << std::endl;
+	// std::cout << "Second daughter is " << part.daughter(1)->pdgId() << std::endl;
+	
+	if(part.daughter(0)->pdgId() != 4900002 && part.daughter(1)->pdgId() != 4900002)
+	{
+	  actualJetNum++;
+	}
+	else if(part.daughter(0)->pdgId() ==4900002 || part.daughter(1)->pdgId() == 4900002)
+	{
+	  std::cout << "First daughter is " << part.daughter(0)->pdgId() << std::endl;
+	  std::cout << "Second daughter is " << part.daughter(1)->pdgId() << std::endl;
+	}
+      }
     }
     // total pt, total energy, of the set of electrons
     double eleSetPT = 0;
@@ -424,14 +486,43 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       h_eleSetSigmaPhi->Fill(std::sqrt(phiMinusMeanSquaresMean)); // get the standard deviation 
       h_eleSetSigmaEta->Fill(std::sqrt(etaMinusMeanSquaresMean));
     }
+  }
+  
+  h_actualJetNum->Fill(actualJetNum);
+  if(thirtyGevOrMoreLeptonExists)
+  {
+    h_30GevOrMoreLeptons->Fill(1);
+  }
+  if(numDarkPhotons != 0)
+  {
     h_darkPhotonNum->Fill(numDarkPhotons); // fill the number of dark photons for this event
+  }
+  else
+  {
+    std::cout << "No dark photons in this event" << std::endl;
+  }
+  if(eles.size() != 0)
+  {
     h_eleFromGammavNum->Fill(eles.size()); // fill the number of electrons for this event
+  }
+  else
+  {
+    std::cout << "No electrons in this event" << std::endl;
+  }
+  if(numNeutralinos != 0)
+  {
     h_neutralinoNum->Fill(numNeutralinos); // fill the number of neutralinos for this event
+  }
+  else
+  {
+    std::cout << "No neutralinos in this event" << std::endl;
   }
 
   // reconstructing electrons
   if(!recoEles.empty()){
-    h_recoLeptonJetNum->Fill(leptonJetReco(recoEles));
+    int recoJetNum = leptonJetReco(recoEles);
+    h_recoLeptonJetNum->Fill(recoJetNum);
+    h_jetNumDiff->Fill(abs(recoJetNum-actualJetNum));
   }
   else{
     std::cout << "No Electrons for this event" << std::endl;
@@ -453,7 +544,7 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     h_eleBiggestPTPhi->Fill(bigPTEle->phi());
   }
 
-
+  //printGenParticleCollection(genParts);
 	// if((part.pdgId() == 1 || part.pdgId() == 2 || part.pdgId() == 3 || part.pdgId() == 4 || part.pdgId() == 5 || part.pdgId() == 6) && 
   // 	   (abs(part.daughter(0)->pdgId()) == 11 || abs(part.daughter(0)->pdgId()) == 13)){
   // 	  if(debug_ > 0){ std::cout << "\nFound the quark! " << "\nQuark is: " << part.pdgId() << "\tStatus is: " << part.status() << "\tNumber of daughters are: " <<
@@ -718,25 +809,35 @@ void Dimuon::notGammavsSort(std::vector<const reco::Candidate*> fullNotGammavs, 
 
 int Dimuon::leptonJetReco(std::vector<const reco::Candidate*> leptons){
   double leptonJets = 0;
-  double deltaRCutoff = 0.5;
+  double deltaRCutoff = 0.2;
+
+  int notInJetLeptonNum = 0;
+  int originalLeptonNum = leptons.size();
+
+  h_recoLeptonNumPerEvent->Fill(leptons.size());
 
   // find the lepton with the highest pt
   std::vector<const reco::Candidate*> smallerPTLeptons;
-  std::vector<const reco::Candidate*> smallerPTLeptons2;
+  std::vector<const reco::Candidate*> notInJetLeptons;
   const reco::Candidate* biggestPTLepton = findBiggestPT(leptons, smallerPTLeptons); 
   
 
   // find the other leptons that are in the same jet
   while(!smallerPTLeptons.empty()){
+    std::cout << "size of smallerPTLeptons " << smallerPTLeptons.size() << std::endl;
+
     bool isJet = false;
     for(auto &lepton : smallerPTLeptons){
-      double deltaEta = biggestPTLepton->eta() - lepton->eta(); // find deltar between the biggest pt lepton and the other leptons
-      double deltaPhi = biggestPTLepton->phi() - lepton->phi();
+      // double deltaEta = biggestPTLepton->eta() - lepton->eta(); // find deltar between the biggest pt lepton and the other leptons
+      // double deltaPhi = biggestPTLepton->phi() - lepton->phi();
       
-      double deltaR = std::sqrt((deltaEta)*(deltaEta)-(deltaPhi)*(deltaPhi));
+      // double deltaR = std::sqrt((deltaEta)*(deltaEta)-(deltaPhi)*(deltaPhi));
+      ROOT::Math::LorentzVector e1 = biggestPTLepton->p4();
+      ROOT::Math::LorentzVector e2 = lepton->p4();
+      double deltaR = reco::deltaR(e1, e2);
 
       if(deltaR > deltaRCutoff){
-	smallerPTLeptons2.push_back(lepton);
+	notInJetLeptons.push_back(lepton);
       }
       else{
 	isJet = true;
@@ -745,12 +846,22 @@ int Dimuon::leptonJetReco(std::vector<const reco::Candidate*> leptons){
     if(isJet){
       leptonJets++;
     }
+    else{
+      notInJetLeptonNum++;
+      std::cout << "not a jet with " << smallerPTLeptons.size() << " electrons observed" << std::endl;
+    }
     smallerPTLeptons.clear();
 
-    biggestPTLepton = findBiggestPT(smallerPTLeptons2, smallerPTLeptons);
-    smallerPTLeptons2.clear();
+    biggestPTLepton = findBiggestPT(notInJetLeptons, smallerPTLeptons);
+    notInJetLeptons.clear();
   }
-    
+  std::cout << "num of lepton jets " << leptonJets << std::endl;
+  if(leptonJets == 1)
+  {
+    h_recoLeptonNumInOneJetEvents->Fill(originalLeptonNum);
+  }
+  h_notInJetLepton->Fill(notInJetLeptonNum);
+
   return leptonJets;
 }
 
@@ -771,6 +882,89 @@ const reco::Candidate* Dimuon::findBiggestPT(std::vector<const reco::Candidate*>
     }
   }
   return biggestPTLepton;
+}
+
+const void Dimuon::printGenParticleCollection(const reco::GenParticleCollection& genParts)
+{
+  const reco::Candidate* daughter1 = nullptr;
+  const reco::Candidate* daughter2 = nullptr;
+
+  const reco::Candidate* mother1 = nullptr;
+  const reco::Candidate* mother2 = nullptr;
+
+  int eventIndex = 0;
+
+  //Format
+  std::cout << std::left << std::setw(10) << "index, " << std::setw(10) << "pdfId, " 
+	    << std::setw(10) << "status; " << std::setw(10) << "mother1; "
+	    << std::setw(10) << "mother2; " << std::setw(10) << "daughter1; " 
+	    << std::setw(10) << "daughter2, " << std::setw(10) << "px, " 
+	    << std::setw(10) << "py, " << std::setw(10) << "pz, " 
+	    << std::setw(10) << "E, " << std::setw(5) << "mass\n";
+
+  //Prints out all of the particles
+  for(auto &part : genParts){
+
+    //Distinguishing Mothers
+    if(part.numberOfMothers() == 2)
+    {
+      mother1 = part.mother(0);
+      mother2 = part.mother(1);
+    }
+    else if(part.numberOfMothers() == 1)
+    {
+      mother1 = part.mother(0);
+      mother2 = part.mother(0);
+    }
+    
+    //Distinguishing Daughters (There can be more than 2 daughters, max of three)
+    if(part.numberOfDaughters() == 2)
+    {
+      daughter1 = part.daughter(0);
+      daughter2 = part.daughter(1);
+    }
+    else if(part.numberOfDaughters() == 1)
+    {
+      daughter1 = part.daughter(0);
+      daughter2 = part.daughter(0);
+    }
+
+    std::cout << std::setw(10) << eventIndex << ", " << std::setw(10) << part.pdgId() << ", " << std::setw(10) << part.status() << "; ";
+
+    if(part.numberOfMothers() != 0)
+    {
+      std::cout << std::setw(10) << getIndexOf(mother1, genParts) << "; " << std::setw(10) << getIndexOf(mother2, genParts) << "; ";
+    }
+    else
+    {
+      std::cout << std::setw(10) << 00 << "; " << std::setw(10) << 00 << "; ";
+    }
+
+    if(part.numberOfDaughters() != 0 && part.numberOfDaughters() != 3)
+    {
+      std::cout << std::setw(10) << getIndexOf(daughter1, genParts) << "; " << std::setw(10) << getIndexOf(daughter2, genParts) << "; ";
+    }
+    else
+    {
+      std::cout << std::setw(10) << 00 << "; " << std::setw(10) << 00 << "; ";
+    }
+
+    std::cout << std::setw(10) << part.px() << ", " << std::setw(10) << part.py() << ", " << std::setw(10) << part.pz() << ", " << std::setw(10) << part.energy() << ", " << std::setw(10) << part.mass() << "\n";
+    
+    eventIndex++;
+  }
+}
+
+const int Dimuon::getIndexOf(const reco::Candidate* part, const reco::GenParticleCollection& genParts)
+{
+  int indexOf = 0;
+  for(auto &possiblePart : genParts)
+  {
+    if(&possiblePart == part)
+      return indexOf;
+    indexOf++;
+  }
+  return -1;
 }
 
 bool Dimuon::isBoson(int pid)
@@ -851,6 +1045,8 @@ const reco::Candidate* Dimuon::getDaughter(const reco::Candidate* part,int pid)
   return nullptr;
   
 }
+
+
 
 
 // ------------ method called once each job just before starting event loop  ------------
