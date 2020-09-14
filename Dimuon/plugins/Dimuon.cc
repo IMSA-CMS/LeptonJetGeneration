@@ -123,6 +123,7 @@ private:
   TH1F *h_recoLeptonJetNum, *h_actualJetNum, *h_jetNumDiff;
   TH1F *h_recoLeptonNumPerEvent, *h_recoLeptonNumInOneJetEvents;
   TH1F *h_notInJetLepton;
+  TH1F *h_noJetNeutralinoNum;
 
   P4Struct bosonP4_; // as a sanity check we have the right event...
   P4Struct muMinusP4_;
@@ -183,10 +184,11 @@ void Dimuon::beginJob()
   // Reconstruction and reconstruction checking histograms
   h_recoLeptonJetNum = fs->make<TH1F>("recoLeptonJetNum", "The number of lepton jets that there appear to be based off of only observing electrons and their angle", 15, -0.5, 14.5);
   h_actualJetNum = fs->make<TH1F>("actualJetNum", "The actual number of lepton jets in the event, based on whether neutrinos produced electrons", 15, -0.5, 14.5);
-  h_jetNumDiff = fs->make<TH1F>("jetNumDiff", "The difference between the number of lepton jets reconstructed, and how many lepton jets there actually were", 5, 0, 5);
+  h_jetNumDiff = fs->make<TH1F>("jetNumDiff", "number of lepton jets reconstructed minus how many lepton jets there actually were", 11, -5.5, 5.5);
   h_recoLeptonNumPerEvent = fs->make<TH1F>("recoLeptonNumPerEvent", "The number of leptons being reconstructed in an event", 15, 0, 15);
   h_recoLeptonNumInOneJetEvents = fs->make<TH1F>("recoLeptonNumInOneJetEvents", "The number of leptons in events where one jet is reconstructed", 15, 0, 15);
   h_notInJetLepton = fs->make<TH1F>("notInJetLepton", "The number of leptons that didn't get put into a jet in each event", 15, 0, 15);
+  h_noJetNeutralinoNum = fs->make<TH1F>("noJetNeutralinoNum", "Each entry is an event with a neutralino producing 4900002, which should have no decays", 0, 0, 1);
  
   tree_= fs->make<TTree>("pdfTree","PDF Tree");
   // tree_->Branch("evtId",&evtId_,EventId::contents().c_str());
@@ -286,14 +288,14 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       if(chi1Initialized)      // if the first neutralino has been found and stored
       {
         ROOT::Math::LorentzVector d1 = chi1->p4();
-	const reco::Candidate* chi2 = &part;
+	      const reco::Candidate* chi2 = &part;
         ROOT::Math::LorentzVector d2 = chi2->p4();
-	h_chiR->Fill(reco::deltaR(d1, d2));
+	      h_chiR->Fill(reco::deltaR(d1, d2));
       }
       else // else save the first neutralino
       {
-	chi1 = &part;
-	chi1Initialized = true;
+	      chi1 = &part;
+	      chi1Initialized = true;
       }
     }
 
@@ -314,171 +316,226 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     {      
       if(part.numberOfDaughters() == 2) // if particle (part) has two daughters
       {
-	numDarkPhotons++;
-	h_darkPhotonPT->Fill(part.pt()); // Enter pT into histogram
-	
-	const reco::Candidate* daughter1; // Container for final state electrons
-	const reco::Candidate* daughter2;
+	      numDarkPhotons++;
+	      h_darkPhotonPT->Fill(part.pt()); // Enter pT into histogram
+    
+        const reco::Candidate* daughter1; // Container for final state electrons
+	      const reco::Candidate* daughter2;
 
-	if(abs(part.daughter(0)->pdgId()) == 11 && abs(part.daughter(1)->pdgId()) == 11) // if both daughters of the dark photon (part) are electrons
-	{
-	  bool stillLooking = true;
-	  const reco::Candidate* checkNext; // Container for the next particle to be examined
+	      if(abs(part.daughter(0)->pdgId()) == 11 && abs(part.daughter(1)->pdgId()) == 11) // if both daughters of the dark photon (part) are electrons
+	      {
+	        bool stillLooking = true;
+	        const reco::Candidate* checkNext; // Container for the next particle to be examined
 	  
-	  checkNext = part.daughter(0); // Set the first particle to be checked as first daughter of dark photon
-	  while(stillLooking) // while the final state electron coming from the first daughter hasn't been found
-	  {
-	    if(checkNext->numberOfDaughters() == 0) // if the particle being checked has no daughters
-	    {
-	      daughter1 = checkNext; // store this particle as the final state of the first daughter
-	      stillLooking = false;
-	    }
-	    else // else check the daughter of the currently being checked particle, next
-	    {
-	      checkNext = checkNext->daughter(0);
-	    }
-	  }
+	        checkNext = part.daughter(0); // Set the first particle to be checked as first daughter of dark photon
+	        while(stillLooking) // while the final state electron coming from the first daughter hasn't been found
+	        {
+	          if(checkNext->numberOfDaughters() == 0) // if the particle being checked has no daughters
+	          {
+	            daughter1 = checkNext; // store this particle as the final state of the first daughter
+	            stillLooking = false;
+	          }
+	          else // else check the daughter of the currently being checked particle, next
+	          {
+	            checkNext = checkNext->daughter(0);
+	          }
+	        }
 
-	  // Finding final state particle of the second daughter of the dark photon
-	  stillLooking = true;
-	  checkNext = part.daughter(1);
-	  while(stillLooking)
-	  {
-	    if(checkNext->numberOfDaughters() == 0)
-	    {
-	      daughter2 = checkNext;
-	      stillLooking = false;
-	    }
-	    else
-	    {
-	      checkNext = checkNext->daughter(0);
-	    }
-	  }
+	        // Finding final state particle of the second daughter of the dark photon
+	        stillLooking = true;
+	        checkNext = part.daughter(1);
+	        while(stillLooking)
+	        {
+	          if(checkNext->numberOfDaughters() == 0)
+	          {
+	            daughter2 = checkNext;
+	            stillLooking = false;
+	          }
+	          else
+	          {
+	            checkNext = checkNext->daughter(0);
+	          }
+	        }
 
-	  // Calculations involving the two final state daughters of the dark photon
-	  h_eleFromGammavPT->Fill(daughter1->pt()); // Filling pT of electrons
-	  h_eleFromGammavPT->Fill(daughter2->pt());
+	        // Calculations involving the two final state daughters of the dark photon
+	        h_eleFromGammavPT->Fill(daughter1->pt()); // Filling pT of electrons
+	        h_eleFromGammavPT->Fill(daughter2->pt());
 	  
-	  eles.push_back(daughter1); // Save the electrons for further analysis later
-	  eles.push_back(daughter2);
+	        eles.push_back(daughter1); // Save the electrons for further analysis later
+	        eles.push_back(daughter2);
 	  
-	  h_elePhi->Fill(daughter1->phi()); // Filling phi and eta for both electrons
-	  h_eleEta->Fill(daughter1->eta());
+	        h_elePhi->Fill(daughter1->phi()); // Filling phi and eta for both electrons
+	        h_eleEta->Fill(daughter1->eta());
 	  
-	  h_elePhi->Fill(daughter2->phi());
-	  h_eleEta->Fill(daughter2->eta());
+	        h_elePhi->Fill(daughter2->phi());
+	        h_eleEta->Fill(daughter2->eta());
 	  
-	  double invariantMass = sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi()))));
-	  h_eleInvariantMass->Fill(invariantMass);
+	        double invariantMass = sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi()))));
+	        h_eleInvariantMass->Fill(invariantMass);
 
-	  double deltaEta = daughter2->eta()-daughter1->eta();
-	  double deltaPhi = reco::deltaPhi(daughter2->phi(), daughter1->phi());
+	        double deltaEta = daughter2->eta()-daughter1->eta();
+	        double deltaPhi = reco::deltaPhi(daughter2->phi(), daughter1->phi());
 	  
-	  h_eleDeltaPhi->Fill(deltaPhi);
-	  h_eleDeltaEta->Fill(deltaEta);
+	        h_eleDeltaPhi->Fill(deltaPhi);
+	        h_eleDeltaEta->Fill(deltaEta);
 
-	  ROOT::Math::LorentzVector d1 = daughter1->p4();
-	  ROOT::Math::LorentzVector d2 = daughter2->p4();
+	        ROOT::Math::LorentzVector d1 = daughter1->p4();
+	        ROOT::Math::LorentzVector d2 = daughter2->p4();
 	  
-	  //double deltaR = std::sqrt((deltaEta)*(deltaEta)-(deltaPhi)*(deltaPhi));
-	  h_eleR->Fill(reco::deltaR(d1, d2));
-	}
-	else
-	{
-	  std::cout << "Dark photon daughters are not both electrons" << std::endl;
-	}
+	        //double deltaR = std::sqrt((deltaEta)*(deltaEta)-(deltaPhi)*(deltaPhi));
+	        h_eleR->Fill(reco::deltaR(d1, d2));
+	      }   
+	      else
+	      {
+	        std::cout << "Dark photon daughters are not both electrons" << std::endl;
+	      }
       }
       else
       {
-	std::cout << "Dark photon doesn't have 2 daughters" << std::endl;
+	      std::cout << "Dark photon doesn't have 2 daughters" << std::endl;
       }
-    }
-
-    // sorting neutralino daughters as electron or not electron and then finding the standard deviation of the phi and eta for the electrons
-    std::vector<const reco::Candidate*> gammavs;
-    std::vector<const reco::Candidate*> gammavs2;
-    std::vector<const reco::Candidate*> notGammavs;
-    std::vector<const reco::Candidate*> notGammavs2;
-    std::vector<const reco::Candidate*> eleSet;
-    if(abs(part.pdgId()) == 1000022) // if particle is a neutralino
-    {
-
-      if(part.numberOfDaughters() == 2 && part.daughter(0)->pdgId() != 1000022 && part.daughter(1)->pdgId() != 1000022) // if neutralino has two daughters and none of those are other neutralinos
-      {
-	//numNeutralinos++; // count neutralino number
-	// sorting neutralino daughters as gammav or not gammav for further analysis
-	if(part.daughter(0)->pdgId() == 4900022) // if first daughter is a dark photon or not
-	{	  
-	  gammavs.push_back(part.daughter(0));
-	}
-	else
-	{
-	  notGammavs.push_back(part.daughter(0));
-	}
-	if(part.daughter(1)->pdgId() == 4900022) // if second daughter is a dark photon or not
-	{
-	  gammavs.push_back(part.daughter(1));
-	}
-	else{
-	  notGammavs.push_back(part.daughter(1));
-	}
-      }
-    }
-    while(!notGammavs.empty() || !gammavs.empty()){ // as long as there are non electrons that aren't sorted
-      gammavsSort(gammavs, gammavs2, eleSet, notGammavs, gammavs); 
-      gammavsSort(gammavs2, gammavs, eleSet, notGammavs, gammavs2);
-      
-      notGammavsSort(notGammavs, notGammavs2, eleSet, gammavs, notGammavs);
-      notGammavsSort(notGammavs2, notGammavs, eleSet, gammavs, notGammavs2);
     }
 
     // starting from the neutralino, find out how many lepton jets were produced
     // also store all the electrons from this jet into a collection for analysis
+    std::vector<const reco::Candidate*> notEleSet;
+    std::vector<const reco::Candidate*> eleSet;
     if(abs(part.pdgId()) == 1000022) // if particle is a neutralino
     {
-      if(part.numberOfDaughters() == 2 && part.daughter(0)->pdgId() != 1000022 && part.daughter(1)->pdgId() != 1000022) // if neutralino has two daughters and none of those are other neutralinos
+      if(part.numberOfDaughters() == 2 && part.daughter(0)->pdgId() != 1000022 && part.daughter(1)->pdgId() != 1000022) // if neutralino has two daughters which aren't neutralinos
       {
-	numNeutralinos++;
-	// std::cout << "First daughter is " << part.daughter(0)->pdgId() << std::endl;
-	// std::cout << "Second daughter is " << part.daughter(1)->pdgId() << std::endl;
-	
-	if(part.daughter(0)->pdgId() != 4900002 && part.daughter(1)->pdgId() != 4900002)
-	{
-	  actualJetNum++;
-	}
-	else if(part.daughter(0)->pdgId() ==4900002 || part.daughter(1)->pdgId() == 4900002)
-	{
-	  std::cout << "First daughter is " << part.daughter(0)->pdgId() << std::endl;
-	  std::cout << "Second daughter is " << part.daughter(1)->pdgId() << std::endl;
-	}
+	      numNeutralinos++;
+
+        // Checking whether this particle creates a jet
+	      if(part.daughter(0)->pdgId() != 4900002 && part.daughter(1)->pdgId() != 4900002) // if neither daughter is 4900002 (a 4900002 decay from neutralino means no further particles will be produced)
+	      {
+	        actualJetNum++;
+	      }
+	      else if(part.daughter(0)->pdgId() == 4900002 || part.daughter(1)->pdgId() == 4900002) // if one of the neutralino's decays is 4900002
+      	{
+          h_noJetNeutralinoNum->Fill(0);
+	        std::cout << "First daughter is " << part.daughter(0)->pdgId() << std::endl;
+	        std::cout << "Second daughter is " << part.daughter(1)->pdgId() << std::endl;
+	      }
+
+        // Gathering electrons in this jet        
+        notEleSet.push_back(part.daughter(0)); // start with the two daughters of the neutralino
+        notEleSet.push_back(part.daughter(1));
+        std::vector<const reco::Candidate*> tempNotEleSet; // temporary storage, so I don't edit vectors while I'm looping through them
+        while(!notEleSet.empty()) // while notEleSet is not empty
+        {
+          for(auto &notEle : notEleSet) // for all (notEle) in notEleSet
+          {
+            if(notEle->numberOfDaughters() == 2) // if notEle has two daughters
+            {
+              if(abs(notEle->daughter(0)->pdgId()) == 11 && abs(notEle->daughter(1)->pdgId()) == 11) // if both daughters of notEle are electrons
+              {
+                eleSet.push_back(notEle->daughter(0)); // put the electrons into their container
+                eleSet.push_back(notEle->daughter(1));
+              }
+              else
+              {
+                tempNotEleSet.push_back(notEle->daughter(0)); // put the not electrons into their container
+                tempNotEleSet.push_back(notEle->daughter(1));
+              }
+            }
+            else if(notEle->numberOfDaughters() == 1) // if notEle has one daughter
+            {
+              tempNotEleSet.push_back(notEle->daughter(0)); // put it into its container (electrons should only come from pair production, and having one daughter means pair production isn't possible)
+            }
+            else if(notEle->numberOfDaughters() == 0) // if notEle has no daughter
+            {
+              continue; // it can't be an electron, and there are no more particles after it, so we're done with this particle
+            }
+            else // if the above cases don't fit, let me know
+            {
+              std::cout << "While searching for electrons in a jet, a particle with more than 2 daughters was found." << std::endl;
+            }
+          }
+          notEleSet.clear();
+
+          for(auto &notEle : tempNotEleSet)
+          {
+            if(notEle->numberOfDaughters() == 2 && abs(notEle->daughter(0)->pdgId()) == 11 && abs(notEle->daughter(1)->pdgId()) ==11)
+            {
+              if(abs(notEle->daughter(0)->pdgId()) == 11 && abs(notEle->daughter(1)->pdgId()) == 11)
+              {
+                eleSet.push_back(notEle->daughter(0));
+                eleSet.push_back(notEle->daughter(1));
+              }
+              else
+              {
+                notEleSet.push_back(notEle->daughter(0));
+                notEleSet.push_back(notEle->daughter(1));
+              }
+            }
+            else if(notEle->numberOfDaughters() == 1)
+            {
+              notEleSet.push_back(notEle->daughter(0));
+            }
+            else if(notEle->numberOfDaughters() == 0)
+            {
+              continue;
+            }
+            else
+            {
+              std::cout << "While searching for electrons in a jet, a particle with more than 2 daughters was found." << std::endl;
+            }
+          }
+          tempNotEleSet.clear();
+        }
       }
     }
-    // total pt, total energy, of the set of electrons
+
+    // Taking final state electrons from the set of electrons in the same jet
+    std::vector<const reco::Candidate*> finalStateEleSet;
+    for(auto &ele : eleSet) // for all the electrons in eleSet
+    {
+      const reco::Candidate* checkNext= ele;
+      bool stillLooking = true;
+      while(stillLooking) // if the electron has daughters, go down the chain until I find the last one
+      {
+        if(checkNext->numberOfDaughters() == 0)
+        {
+          finalStateEleSet.push_back(ele);
+          stillLooking = false;
+        }
+        else
+        {
+          checkNext = ele->daughter(0);
+        }
+      }
+    }
+    // Finding total pt, total energy, of the set of electrons from the same jet
     double eleSetPT = 0;
     double eleSetE = 0;
-    for(auto &ele : eleSet){
+    for(auto &ele : finalStateEleSet)
+    {
       eleSetPT += ele->pt();
       eleSetE += ele->energy();
     }
-    if(eleSetPT != 0){
+    if(eleSetPT != 0)
+    {
       h_eleSetPT->Fill(eleSetPT);
       h_eleSetE->Fill(eleSetE);
     
       double eleSetSumPhi = 0;
       double eleSetSumEta = 0;
       // standard deviation of set of electrons
-      for(auto &ele : eleSet){ // sum the phi/eta
-	eleSetSumPhi += ele->phi();
-	eleSetSumEta += ele->eta();
+      for(auto &ele : finalStateEleSet) // sum the phi/eta
+      {
+	      eleSetSumPhi += ele->phi();
+	      eleSetSumEta += ele->eta();
       }
       double eleSetMeanPhi = eleSetSumPhi/eleSet.size(); // get the mean of phi/eta
       double eleSetMeanEta = eleSetSumEta/eleSet.size();
       
       double phiMinusMeanSquaresSum = 0;
       double etaMinusMeanSquaresSum = 0;
-      for(auto &ele:eleSet){ // get the phi/eta minus their mean and then square that and then add it to a running total (sum)
-	phiMinusMeanSquaresSum += (ele->phi() - eleSetMeanPhi) * (ele->phi() - eleSetMeanPhi);
-	etaMinusMeanSquaresSum += (ele->eta() - eleSetMeanEta) * (ele->eta() - eleSetMeanEta);
+      for(auto &ele:finalStateEleSet) // get the phi/eta minus their mean and then square that and then add it to a running total (sum)
+      {
+	      phiMinusMeanSquaresSum += (ele->phi() - eleSetMeanPhi) * (ele->phi() - eleSetMeanPhi);
+	      etaMinusMeanSquaresSum += (ele->eta() - eleSetMeanEta) * (ele->eta() - eleSetMeanEta);
       }
       double phiMinusMeanSquaresMean = phiMinusMeanSquaresSum/eleSet.size(); // get the mean of the previous step
       double etaMinusMeanSquaresMean = etaMinusMeanSquaresSum/eleSet.size();
@@ -522,7 +579,7 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   if(!recoEles.empty()){
     int recoJetNum = leptonJetReco(recoEles);
     h_recoLeptonJetNum->Fill(recoJetNum);
-    h_jetNumDiff->Fill(abs(recoJetNum-actualJetNum));
+    h_jetNumDiff->Fill(recoJetNum-actualJetNum);
   }
   else{
     std::cout << "No Electrons for this event" << std::endl;
@@ -543,207 +600,6 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     h_eleBiggestPTEta->Fill(bigPTEle->eta());
     h_eleBiggestPTPhi->Fill(bigPTEle->phi());
   }
-
-  //printGenParticleCollection(genParts);
-	// if((part.pdgId() == 1 || part.pdgId() == 2 || part.pdgId() == 3 || part.pdgId() == 4 || part.pdgId() == 5 || part.pdgId() == 6) && 
-  // 	   (abs(part.daughter(0)->pdgId()) == 11 || abs(part.daughter(0)->pdgId()) == 13)){
-  // 	  if(debug_ > 0){ std::cout << "\nFound the quark! " << "\nQuark is: " << part.pdgId() << "\tStatus is: " << part.status() << "\tNumber of daughters are: " <<
-  // 	    part.numberOfDaughters() << "\tFirst daughter is:"  << part.daughter(0)->pdgId() << "\tSecond daughter is: " << part.daughter(1)->pdgId() << std::endl;
-  // 	    //	    mother1 = getMother(part.mother(0), 2212);
-  // 	    //std::cout << "\nQuark mother is:" << mother1->pdgId() << std::endl;
-  // 	  //      if(part.status() < -20 && part.status() > -30){ std::cout << "\nFound the Z boson!";
-  // 	  std::cout << "\nkinematic properties of the particles are: " << std::endl;
-  // 	  std::cout << "\npT1: " << part.daughter(0)->pt() << "\tpT2: " << part.daughter(1)->pt() << std::endl;
-  // 	  std::cout << "\neta1: " << part.daughter(0)->eta() << "\teta2: " << part.daughter(1)->eta() << std::endl;
-  // 	  std::cout << "\nphi1: " << part.daughter(0)->phi() << "\tphi2: " << part.daughter(1)->phi() << std::endl;
-  // 	  }
-  // 	  daughter1 = getLastDaughter(part.daughter(0), part.daughter(0)->pdgId());
-  // 	  daughter2 = getLastDaughter(part.daughter(1), part.daughter(1)->pdgId());
-  // 	  std::cout << "\nDaughter particle is: " << daughter1->pdgId() << "tStatus is: " << daughter1->status()
-  // 		    << "\tDaughter2 is: " << daughter2->pdgId() << "\tStatus is: " << daughter2->status() << std::endl;
-  // 	  boson = nullptr;
-  // 	  if(!daughter1 || !daughter2){
-  // 	    std::cout<<"daughter1::0x"<<std::hex<<daughter1<<std::dec<<std::endl;
-  // 	    std::cout<<"daughter2::0x"<<std::hex<<daughter2<<std::dec<<std::endl;
-  // 	  }
-  // 	}
-
-  // 	else if(part.pdgId() == 23 && (abs(part.daughter(0)->pdgId()) == 11 || abs(part.daughter(0)->pdgId()) == 13)){
-  // 	  if(debug_ > 0){std::cout << "\nFound the Z boson! " << "\tStatus is: " << part.status() << "\tNumber of daughters are: " <<
-  // 	    part.numberOfDaughters() << "\tFirst daughter is:"  << part.daughter(0)->pdgId() << "\tSecond daughter is: " << part.daughter(1)->pdgId() << std::endl;
-  // 	  //      if(part.status() < -20 && part.status() > -30){ std::cout << "\nFound the Z boson!";
-  // 	  std::cout << "\nkinematic properties of the particles are: " << std::endl;
-  // 	  std::cout << "\npT1: " << part.daughter(0)->pt() << "\tpT2: " << part.daughter(1)->pt() << std::endl;
-  // 	  std::cout << "\neta1: " << part.daughter(0)->eta() << "\teta2: " << part.daughter(1)->eta() << std::endl;
-  // 	  std::cout << "\nphi1: " << part.daughter(0)->phi() << "\tphi2: " << part.daughter(1)->phi() << std::endl;
-  // 	  }
-  // 	  daughter1 = getLastDaughter(part.daughter(0), part.daughter(0)->pdgId());
-  // 	  daughter2 = getLastDaughter(part.daughter(1), part.daughter(1)->pdgId());
-  // 	  std::cout << "\nDaughter particle is: " << daughter1->pdgId() << "tStatus is: " << daughter1->status()
-  // 		    << "\tDaughter2 is: " << daughter2->pdgId() << "\tStatus is: " << daughter2->status() << std::endl;
-  // 	  mother1 = &part;
-  // 	  boson = mother1;
-  // 	  if(!boson || !daughter1 || !daughter2){
-  // 	    std::cout<<"boson::0x"<<std::hex<<boson<<std::dec<<std::endl;
-  // 	    std::cout<<"daughter1::0x"<<std::hex<<daughter1<<std::dec<<std::endl;
-  // 	    std::cout<<"daughter2::0x"<<std::hex<<daughter2<<std::dec<<std::endl;
-  // 	  }
-
-  // 	}
-  //   }
-      
-  
-
-
-  //   if(debug_ > 2){
-  //     std::cout << "Eta of daughter1 is: " << daughter1->eta() << "\n";
-  //     std::cout << "Eta of daughter2 is: " << daughter2->eta() << "\n";
-  //   }
-
-  //     if(boson){
-  // 	bosonId_=boson->pdgId();
-  // 	bosonP4_.fill(boson->p4());
-	
-  // 	h_Zmass->Fill(boson->mass());
-  // 	h_Zpt->Fill(boson->pt());
-  // 	h_Zeta ->Fill(boson->eta());
-  // 	h_Zphi ->Fill(boson->phi());
-  // 	h_Zcharge->Fill(boson->charge());
-  //     }
-
-  //   if(daughter1->charge() > 0 && daughter2->charge() < 0){
-  //     muMinus = daughter2;
-  //     muPlus = daughter1;
-  //   }
-  //   else if(daughter1->charge() < 0 && daughter2->charge() > 0){
-  //     muMinus = daughter1;
-  //     muPlus = daughter2;
-  //   }
-
-  //   else return;
-
-  //   if(debug_ > 0){  
-  //     std::cout<< "\n\nDaughter1: pId = " << muMinus->pdgId() << "\tpT = " << muMinus->pt() << "\teta = " 
-  // 	       << muMinus->eta() << "\tphi = " << muMinus->phi() << "\tq = " << muMinus->charge();
-  //     std::cout<< "\nDaughter2: pId = " << muPlus->pdgId() << "\tpT = " << muPlus->pt() << "\teta = " << muPlus->eta() << "\tphi = " << 
-  // 	muPlus->phi() << "\tq = " << muPlus->charge();
-  //   }
-    
-  // muMinusP4_.fill(muMinus->p4());
-  //   muMinusPID_=muMinus->pdgId();
-  //   if(debug_ > 0){  
-  //     std::cout<< "\n\nDaughter1: pId = " << muMinus->pdgId() << "\tpT = " << muMinus->pt() << "\teta = " 
-  // 	       << muMinus->eta() << "\tphi = " << muMinus->phi() << "\tq = " << muMinus->charge();
-  //   std::cout<< "\nDaughter2: pId = " << muPlus->pdgId() << "\tpT = " << muPlus->pt() << "\teta = " << muPlus->eta() << "\tphi = " << 
-  //     muPlus->phi() << "\tq = " << muPlus->charge();
-  //   }
-
-
-  //   h_muMinusmass->Fill(muMinus->mass());
-  //   h_muMinuspt->Fill(muMinus->pt());
-  //   h_muMinuseta->Fill(muMinus->eta());
-  //   h_muMinusphi->Fill(muMinus->phi());
-  //   h_muMinuscharge->Fill(muMinus->charge());
-  //   h_thetaMuMinus->Fill(muMinus->theta());  
-  
-  //   muPlusP4_.fill(muPlus->p4());
-  //   muPlusPID_=muPlus->pdgId();
-
-  //   h_muPlusmass->Fill(muPlus->mass());
-  //   h_muPluspt->Fill(muPlus->pt());
-  //   h_muPluseta->Fill(muPlus->eta());
-  //   h_muPlusphi->Fill(muPlus->phi());
-  //   h_muPluscharge->Fill(muPlus->charge());
-  //   h_thetaMuPlus->Fill(muPlus->theta());    
-
-  //   muPlusKPlus = (1/sqrt(2))*(muPlus->energy() + muPlus->pz());
-  //   muPlusKMinus = (1/sqrt(2))*(muPlus->energy() - muPlus->pz());
-  //   muMinusKPlus = (1/sqrt(2))*(muMinus->energy() + muMinus->pz());
-  //   muMinusKMinus = (1/sqrt(2))*(muMinus->energy() - muMinus->pz());
-
-  //   invariantK = (muPlusKPlus*muMinusKMinus - muMinusKPlus*muPlusKMinus);
-  //   std::cout << "\n\nInvariantK is: " << invariantK << std::endl;
-
-  //   dimuon = muMinus->p4() + muPlus->p4();
-
-  //   dimuonPt =dimuon.pt();
-  //   dimuonPz = dimuon.pz();
-  //   pseudorapidity = asinh(dimuonPz/dimuonPt);
-  //   dimuonPx = dimuon.px();
-  //   dimuonPy = dimuon.py();
-  //   Phi = acos(dimuonPx/dimuonPt);
-  //   dimuonQ = sqrt(pow(dimuon.energy(),2) - pow(dimuon.pt(),2) - pow(dimuon.pz(),2));
-  //   std::cout << "\n\nDimuon Energy is: " << dimuon.energy() << std::endl << std::endl;
-    
-  //   double denominatorTheta, denominatorPhi1, denominatorPhi2, numeratorPhi1, numeratorPhi2;
-  //   double denominatorPhi, numeratorPhi;
-  //   double deltaX, deltaY;
-  //   double invariantMass;
-
-  //   denominatorTheta = dimuonQ*sqrt(pow(dimuonQ, 2) + pow(dimuon.pt(), 2));
-  //   thetaCos = (dimuon.pz()/fabs(dimuon.pz()))*(2/denominatorTheta)*invariantK;
-  //   thetaCS = acos(thetaCos);
-
-  //   denominatorPhi1 = dimuonQ*dimuon.pt();
-  //   numeratorPhi1 = sqrt(pow(dimuonQ, 2) + pow(dimuon.pt(), 2));
-  //   deltaX = muPlus->px() - muMinus->px();
-  //   deltaY = muPlus->py() - muMinus->py();
-  //   denominatorPhi2 = ((deltaX*dimuon.px()) + (deltaY*dimuon.py()));
-  //   numeratorPhi2 = ((deltaX*dimuon.py()) + (deltaY*dimuon.px()));
-  //   numeratorPhi = numeratorPhi1*numeratorPhi2;
-  //   denominatorPhi = denominatorPhi1 * denominatorPhi2;
-
-  //   phiTan = numeratorPhi/denominatorPhi;
-  //   phiCS = atan(phiTan);
-
-
-  //   mu1Energy = muPlus->energy();
-  //   mu2Energy = muMinus->energy();
-  //   std::cout << "\n\nmuon Energies are: " << mu1Energy << "__" << mu2Energy << std::endl << std::endl;
-  //   std::cout << "\ndimuon px_py_pz are: "<< dimuonPx << "_" << dimuonPy << "_" << dimuonPz << std::endl;
- 
-  //   cosTheta=thetaCos;
-  //   tanPhi=phiTan;
-  //   csTheta=thetaCS;
-  //   csPhi=phiCS;
-
-
-  //   h_cosTheta->Fill(thetaCos);
-  //   h_csTheta->Fill(thetaCS);
-  //   h_tanPhi->Fill(phiTan);
-  //   h_csPhi->Fill(phiCS);
-
-    
-
-  //   std::cout << "\n\n\ncos(Theta_CS) = " << thetaCos << "\tThetaCS = " << thetaCS << std::endl;
-  //   std::cout << "\n\n\nTan(phi_CS) = " << phiTan << "\tPhiCS = " << phiCS << std::endl;
-
-  //   invariantMass = sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi()))));
-
-
-  //   if(thetaCos < 0.0){
-  //     h_cosThetaMinusInvariantMass->Fill(invariantMass);
-  //     mCosThetaMinus = invariantMass;
-  //   }
-  //   else{
-  //     h_cosThetaPlusInvariantMass->Fill(invariantMass);
-  //     mCosThetaPlus = invariantMass;
-  //   }
-
-
-  //   h_dphi->Fill(TVector2::Phi_mpi_pi(muMinus->phi()- muPlus->phi()));
-  //   h_dtheta->Fill(TVector2::Phi_mpi_pi(muMinus->theta()- muPlus->theta()));
-  //   h_dr->Fill(reco::deltaR(muMinus->p4(),muPlus->p4()));
-  //   h_massInvar->Fill(sqrt(2 * daughter1->pt() * daughter2->pt() *( cosh(daughter1->eta() - daughter2->eta()) - cos(TVector2::Phi_mpi_pi(daughter1->phi() - daughter2->phi())))));
-  //   h_dimuonPt->Fill(dimuonPt);
-  //   h_dimuonEta->Fill(pseudorapidity);
-  //   h_dimuonPhi->Fill(Phi);
-  //   h2_phi1_vs_phi2->Fill(muMinus->phi(),muPlus->phi());  
-  //   h2_eta1_vs_eta2->Fill(muMinus->eta(),muPlus->eta());
-  //   h2_pt1_vs_pt2->Fill(muMinus->pt(),muPlus->pt());
-
-
-    //  }
 
   std::cout << "\n\n===========================================================================================================" << std::endl;
   tree_->Fill();  
@@ -809,7 +665,7 @@ void Dimuon::notGammavsSort(std::vector<const reco::Candidate*> fullNotGammavs, 
 
 int Dimuon::leptonJetReco(std::vector<const reco::Candidate*> leptons){
   double leptonJets = 0;
-  double deltaRCutoff = 0.2;
+  double deltaRCutoff = .7;
 
   int notInJetLeptonNum = 0;
   int originalLeptonNum = leptons.size();
