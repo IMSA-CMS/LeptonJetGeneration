@@ -50,6 +50,11 @@ You can use the following if you want to see the debug output and don't want it 
 ```
 cmsRun Dimuon_cfg.py
 ```
+The outfile should be called "Pythia6_Sep21_CI_L13000_8TeV_Sep21.root" unless you changed it. To open file in root:
+```
+root Pythia6_Sep21_CI_L13000_8TeV_Sep21.root
+```
+This has histograms which you can quickly check to see if it makes sense.
 
 Dimuon_cfg.py runs Dimuon.cc, which is a file in the plugins directoy. To access the plugins directory from the Dimoun directory:
 ```

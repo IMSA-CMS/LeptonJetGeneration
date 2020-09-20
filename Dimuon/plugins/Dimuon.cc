@@ -279,7 +279,6 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   bool chi1Initialized = false;
 
   int actualJetNum = 0;
-
   for(auto &part : genParts) // for every particle (part) in this event (genParts)
   {
     // Neutralino delta r calculations
@@ -306,7 +305,7 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     }
     
     // Filling reconstruction electrons container
-    if(abs(part.pdgId()) == 11 && part.numberOfDaughters() == 0)
+    if(abs(part.pdgId()) == 11 && part.numberOfDaughters() == 0 && part.pt() > 20 )
     {
       recoEles.push_back(&part);
     }
@@ -417,7 +416,6 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	        std::cout << "First daughter is " << part.daughter(0)->pdgId() << std::endl;
 	        std::cout << "Second daughter is " << part.daughter(1)->pdgId() << std::endl;
 	      }
-
         // Gathering electrons in this jet        
         notEleSet.push_back(part.daughter(0)); // start with the two daughters of the neutralino
         notEleSet.push_back(part.daughter(1));
@@ -486,7 +484,6 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         }
       }
     }
-
     // Taking final state electrons from the set of electrons in the same jet
     std::vector<const reco::Candidate*> finalStateEleSet;
     for(auto &ele : eleSet) // for all the electrons in eleSet
@@ -502,11 +499,26 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         }
         else
         {
-          checkNext = ele->daughter(0);
+          bool radiatesEle = false;
+          int numDaughters = checkNext->numberOfDaughters();
+          for(int particleIndex = 0; particleIndex < numDaughters; particleIndex++)
+          {
+            if(abs(checkNext->daughter(particleIndex)->pdgId()) == 11)
+            {
+              checkNext = checkNext->daughter(particleIndex);
+              radiatesEle = true;
+              particleIndex = numDaughters;
+            }
+          }
+          if(!radiatesEle)
+          {
+            std::cout << "Electron has daughters of which none are electrons" << std::endl;
+          }
         }
       }
     }
     // Finding total pt, total energy, of the set of electrons from the same jet
+    
     double eleSetPT = 0;
     double eleSetE = 0;
     for(auto &ele : finalStateEleSet)
@@ -665,7 +677,8 @@ void Dimuon::notGammavsSort(std::vector<const reco::Candidate*> fullNotGammavs, 
 
 int Dimuon::leptonJetReco(std::vector<const reco::Candidate*> leptons){
   double leptonJets = 0;
-  double deltaRCutoff = .7;
+  double deltaRCutoff = .5;
+  // .6 to .7 seems like the best for hadronization off
 
   int notInJetLeptonNum = 0;
   int originalLeptonNum = leptons.size();

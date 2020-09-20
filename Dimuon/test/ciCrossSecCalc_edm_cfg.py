@@ -113,7 +113,7 @@ process.generator = cms.EDFilter("Pythia8GeneratorFilter",
                         'SLHA:readFrom = 2',
                         'SLHA:file = sps1aWithDecays.spc',
                         #'HiddenValley:all',
-                        'HadronLevel:all = off',
+                        #'HadronLevel:all = off',
 
                         '4900001:m0 = 6.5',
                         '4900002:m0 = 0.1',
