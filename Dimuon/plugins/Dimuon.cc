@@ -124,6 +124,7 @@ private:
   TH1F *h_recoLeptonNumPerEvent, *h_recoLeptonNumInOneJetEvents;
   TH1F *h_notInJetLepton;
   TH1F *h_noJetNeutralinoNum;
+  TH1F *h_acceptedEventsNum;
 
   P4Struct bosonP4_; // as a sanity check we have the right event...
   P4Struct muMinusP4_;
@@ -189,6 +190,7 @@ void Dimuon::beginJob()
   h_recoLeptonNumInOneJetEvents = fs->make<TH1F>("recoLeptonNumInOneJetEvents", "The number of leptons in events where one jet is reconstructed", 15, 0, 15);
   h_notInJetLepton = fs->make<TH1F>("notInJetLepton", "The number of leptons that didn't get put into a jet in each event", 15, 0, 15);
   h_noJetNeutralinoNum = fs->make<TH1F>("noJetNeutralinoNum", "Each entry is an event with a neutralino producing 4900002, which should have no decays", 0, 0, 1);
+  h_acceptedEventsNum = fs->make<TH1F>("acceptedEventsNum", "Each entry is an event which was accepted, that is, a algorithm identifies it as a lepton jet", 0, 0, 1);
  
   tree_= fs->make<TTree>("pdfTree","PDF Tree");
   // tree_->Branch("evtId",&evtId_,EventId::contents().c_str());
@@ -304,8 +306,8 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       thirtyGevOrMoreLeptonExists = true;
     }
     
-    // Filling reconstruction electrons container
-    if(abs(part.pdgId()) == 11 && part.numberOfDaughters() == 0 && part.pt() > 20 )
+    // Filling reconstruction electrons container, must be electron and be greater than a certain gev
+    if(abs(part.pdgId()) == 11 && part.numberOfDaughters() == 0 && part.pt() > 5 )
     {
       recoEles.push_back(&part);
     }
@@ -587,16 +589,6 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     std::cout << "No neutralinos in this event" << std::endl;
   }
 
-  // reconstructing electrons
-  if(!recoEles.empty()){
-    int recoJetNum = leptonJetReco(recoEles);
-    h_recoLeptonJetNum->Fill(recoJetNum);
-    h_jetNumDiff->Fill(recoJetNum-actualJetNum);
-  }
-  else{
-    std::cout << "No Electrons for this event" << std::endl;
-  }
-
   const reco::Candidate* bigPTEle;
   double biggestElePt = 0;
 
@@ -611,6 +603,21 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     h_eleBiggestPT->Fill(bigPTEle->pt());
     h_eleBiggestPTEta->Fill(bigPTEle->eta());
     h_eleBiggestPTPhi->Fill(bigPTEle->phi());
+  }
+
+  // reconstructing electrons
+  if(!recoEles.empty()){
+    int recoJetNum = leptonJetReco(recoEles);
+    h_recoLeptonJetNum->Fill(recoJetNum);
+    h_jetNumDiff->Fill(recoJetNum-actualJetNum);
+
+    if(biggestElePt > 20 && recoJetNum > 0)
+    {
+      h_acceptedEventsNum->Fill(1);
+    }
+  }
+  else{
+    std::cout << "No Electrons for this event" << std::endl;
   }
 
   std::cout << "\n\n===========================================================================================================" << std::endl;
@@ -677,7 +684,7 @@ void Dimuon::notGammavsSort(std::vector<const reco::Candidate*> fullNotGammavs, 
 
 int Dimuon::leptonJetReco(std::vector<const reco::Candidate*> leptons){
   double leptonJets = 0;
-  double deltaRCutoff = .5;
+  double deltaRCutoff = 2;
   // .6 to .7 seems like the best for hadronization off
 
   int notInJetLeptonNum = 0;

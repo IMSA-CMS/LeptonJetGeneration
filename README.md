@@ -2,20 +2,20 @@
 
 This packages is designed to perform GEN-only private MC productions using the CMSSW Pythia8 release that is included in the working CMSSW release. It also includes basic TTree-making files and simplistic histogramming that is intended primarly as a starting point to springboard to do whatever specific plotting is desired. However, this basic structure has been edited to generate and analyze supersymmetry events.
 
-# Soon-to-be Outdated CMSSW_8_0_21 Instuctions (Valid for 2016 running)
+# Update Instructions to Run Lepton Jets
 I (Ming Huang) have tried to update these instructions as best as I can so people are less confused, since this information IS outdated.
 
-First create a clean CMSSW_8_0_21 release area:
+First create a clean CMSSW_11_0_2 release area:
 ```
-cmsrel CMSSW_8_0_21
-cd CMSSW_8_0_21/src
+cmsrel CMSSW_11_0_2
+cd CMSSW_11_0_2/src
 cmsenv
 ```
 
 Next clone the LeptonJetGeneration repository here
 
 ```
-git clone -b cmssw8021 https://github.com/IMSA-CMS/LeptonJetGeneration GenStudy
+git clone https://github.com/IMSA-CMS/LeptonJetGeneration GenStudy
 cd GenStudy
 ```
 
