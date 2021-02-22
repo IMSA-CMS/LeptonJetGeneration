@@ -93,9 +93,9 @@ process.generator = cms.EDFilter("Pythia8GeneratorFilter",
 			#'PartonLevel:MPI = '+str(options.ULE),
 			#'PartonLevel:ISR = '+str(options.ISR),
 			#'PartonLevel:FSR = '+str(options.FSR),
-                        'PartonLevel:MPI = off',
-                        'PartonLevel:ISR = off',
-                        'PartonLevel:FSR = off',
+                        'PartonLevel:MPI = on',
+                        'PartonLevel:ISR = on',
+                        'PartonLevel:FSR = on',
                         # turn on for final
 			'PhaseSpace:pTHatMin = '+str(options.pTMin),
                         'PhaseSpace:mHatMin = '+str(options.minMass),
@@ -179,7 +179,7 @@ process.generator = cms.EDFilter("Pythia8GeneratorFilter",
                         'HiddenValley:Ngauge = 1',
                         'HiddenValley:doKinMix = on',
                         'HiddenValley:FSR = on',
-                        'HiddenValley:alphaFSR = 0'
+                        'HiddenValley:alphaFSR = 0.3'
 		
 		
 		
