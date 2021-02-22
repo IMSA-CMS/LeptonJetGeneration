@@ -837,7 +837,7 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     {
       std::cout << "No Leptons for this event" << std::endl;
     }
-  }
+  //}
   else
   {
     recoLeptons.clear();
@@ -995,7 +995,7 @@ const void Dimuon::printGenParticleCollection(const reco::GenParticleCollection&
     std::cout << std::setw(10) << part.px() << ", " << std::setw(10) << part.py() << ", " << std::setw(10) << part.pz() << ", " << std::setw(10) << part.energy() << ", " << std::setw(10) << part.mass() << "\n";
     
     eventIndex++;
-  //}
+  }
 }
 
 const int Dimuon::getIndexOf(const reco::Candidate* part, const reco::GenParticleCollection& genParts)
