@@ -127,6 +127,12 @@ private:
   TH1F *h_recoLeptonJetCounter, *h_actualLeptonJetCounter;
   TH1F *h_triggerMuonDeltaR;
 
+  // Four vector comparison histograms
+  TH1F *h_chiPt, *h_lepJetPt, *h_chiLepPtDiff;
+  TH1F *h_chiPhi, *h_lepJetPhi, *h_chiLepPhiDiff;
+  TH1F *h_chiEta, *h_lepJetEta, *h_chiLepEtaDiff;
+  TH1F *h_chiMass, *h_lepJetMass, *h_chiLepMassDiff;
+
   P4Struct bosonP4_; // as a sanity check we have the right event...
   P4Struct muMinusP4_;
   P4Struct muPlusP4_;
@@ -174,22 +180,22 @@ void Dimuon::beginJob()
 
   // High pT electron histograms
   h_30GevOrMoreLeptons = fs->make<TH1F>("30GevOrMoreLeptons", "The number of events that have a lepton 30 gev or greater", 2, 0, 2);
-  h_lepBiggestPT = fs->make<TH1F>("lepBiggestPT", "PT of the lepton with the biggest PT in its event", 150, 0, 100);
+  h_lepBiggestPT = fs->make<TH1F>("lepBiggestPT", "PT of the lepton with the biggest PT in its event", 20, 0, 100);
   h_lepBiggestPTEta = fs->make<TH1F>("lepBiggestPTEta", "Eta of lepton with biggest PT", 100, -10, 10);
   h_lepBiggestPTPhi = fs->make<TH1F>("lepBiggestPTPhi", "Phi of lepton with biggest PT", 100, -3.2, 3.2);
 
-  h_lepSecondBiggestPT = fs->make<TH1F>("lepSecondBiggestPT", "PT of the lepton with the second biggest PT in its event", 150, 0, 100);
+  h_lepSecondBiggestPT = fs->make<TH1F>("lepSecondBiggestPT", "PT of the lepton with the second biggest PT in its event", 20, 0, 100);
   h_lepSecondBiggestPTEta = fs->make<TH1F>("lepSecondBiggestPTEta", "Eta of lepton with second biggest PT", 100, -10, 10);
   h_lepSecondBiggestPTPhi = fs->make<TH1F>("lepSecondBiggestPTPhi", "Phi of lepton with second biggest PT", 100, -3.2, 3.2);
   
-  h_lepThirdBiggestPT = fs->make<TH1F>("lepThirdBiggestPT", "PT of the lepton with the third biggest PT in its event", 150, 0, 30);
+  h_lepThirdBiggestPT = fs->make<TH1F>("lepThirdBiggestPT", "PT of the lepton with the third biggest PT in its event", 20, 0, 100);
   h_lepThirdBiggestPTEta = fs->make<TH1F>("lepThirdBiggestPTEta", "Eta of lepton with third biggest PT", 100, -10, 10);
   h_lepThirdBiggestPTPhi = fs->make<TH1F>("lepThirdBiggestPTPhi", "Phi of lepton with third biggest PT", 100, -3.2, 3.2);
 
   
-  h_lepBiggestPTPasses = fs->make<TH1F>("h_lepBiggestPTPasses", "Fraction of biggest pT leptons of which, it's event passes the trigger for each pT", 150, 0, 100);
-  h_lepSecondBiggestPTPasses = fs->make<TH1F>("h_lepSecondBiggestPTPasses", "Fraction of second biggest pT leptons of which, it's event passes the trigger for each pT", 150, 0, 100);
-  h_lepThirdBiggestPTPasses = fs->make<TH1F>("h_lepThirdBiggestPTPasses", "Fraction of third biggest pT leptons of which, it's event passes the trigger for each pT", 150, 0, 30);
+  h_lepBiggestPTPasses = fs->make<TH1F>("h_lepBiggestPTPasses", "Fraction of biggest pT leptons of which, it's event passes the trigger for each pT", 20, 0, 100);
+  h_lepSecondBiggestPTPasses = fs->make<TH1F>("h_lepSecondBiggestPTPasses", "Fraction of second biggest pT leptons of which, it's event passes the trigger for each pT", 20, 0, 100);
+  h_lepThirdBiggestPTPasses = fs->make<TH1F>("h_lepThirdBiggestPTPasses", "Fraction of third biggest pT leptons of which, it's event passes the trigger for each pT", 20, 0, 100);
 
   h_triggerLeptonsMinDeltaR = fs->make<TH1F>("h_triggerLeptonsMinDeltaR", "delta r between the two trigger leptons that have the smallest delta r", 100, 0, .1);
 
@@ -210,6 +216,23 @@ void Dimuon::beginJob()
   h_acceptedEventsNum = fs->make<TH1F>("acceptedEventsNum", "Each entry is an event which was accepted, that is, a algorithm identifies it as a lepton jet", 0, 0, 1);
   h_recoLeptonJetCounter = fs->make<TH1F>("recoLeptonJetCounter", "Each entry represents one lepton jet that was reconstructed", 0, 0, 1);
   h_actualLeptonJetCounter = fs->make<TH1F>("actualLeptonJetCounter", "Each entry represents one lepton jet that there actually is", 0, 0, 1);
+
+  // Four vector comparison histograms
+  h_chiPt = fs->make<TH1F>("chiPt", "The pt of all neutralinos in the event", 100, -100, 400);
+  h_lepJetPt = fs->make<TH1F>("lepJetPt", "The pt of all lepton jets in the event", 100, -100, 400);
+  h_chiLepPtDiff = fs->make<TH1F>("chiLepPtDiff", "The differnce in pt between all pairs of lepton jets and their neutralinos  in the event", 100, -100, 400);
+
+  h_chiPhi = fs->make<TH1F>("chiPhi", "The phi of all neutralinos in the event", 100, -3.2, 3.2);
+  h_lepJetPhi = fs->make<TH1F>("lepJetPhi", "The phi of all lepton jets in the event", 100, -3.2, 3.2);
+  h_chiLepPhiDiff = fs->make<TH1F>("chiLepPhiDiff", "The differnce in phi between all pairs of lepton jets and their neutralinos  in the event", 100, -3.2, 3.2);
+
+  h_chiEta = fs->make<TH1F>("chiEta", "The eta of all neutralinos in the event", 100, -10, 10);
+  h_lepJetEta = fs->make<TH1F>("lepJetEta", "The eta of all lepton jets in the event", 100, -10, 10);
+  h_chiLepEtaDiff = fs->make<TH1F>("chiLepEtaDiff", "The differnce in eta between all pairs of lepton jets and their neutralinos  in the event", 100, -10, 10);
+
+  h_chiMass = fs->make<TH1F>("chiMass", "The mass of all neutralinos in the event", 100, -100, 400);
+  h_lepJetMass = fs->make<TH1F>("lepJetMass", "The mass of all lepton jets in the event", 100, -100, 400);
+  h_chiLepMassDiff = fs->make<TH1F>("chiLepMassDiff", "The differnce in mass between all pairs of lepton jets and their neutralinos  in the event", 100, -100, 400);
 
   tree_= fs->make<TTree>("pdfTree","PDF Tree");
   // tree_->Branch("evtId",&evtId_,EventId::contents().c_str());
@@ -297,6 +320,7 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   bool thirtyGevOrMoreLeptonExists = false;
 
   const reco::Candidate* chi1;   // Variable to place first neutralino while looking for the second
+  const reco::Candidate* chi2;
   bool chi1Initialized = false;
 
   int actualJetNum = 0;
@@ -313,7 +337,7 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       if(chi1Initialized)      // if the first neutralino has been found and stored
       {
         ROOT::Math::LorentzVector d1 = chi1->p4();
-	      const reco::Candidate* chi2 = &part;
+	      chi2 = &part;
         ROOT::Math::LorentzVector d2 = chi2->p4();
 	      h_chiR->Fill(reco::deltaR(d1, d2));
       }
@@ -625,7 +649,7 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   double secondBiggestLepPt = 0;
   double thirdBiggestLepPt = 0;
 
-  //if(recoLeptons.size() >= 4)
+  if(recoLeptons.size() >= 4)
   {
     const reco::Candidate* bigPTLep;
     std::vector<const reco::Candidate*> lepsMinusBigPTLep;
@@ -747,8 +771,13 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       bool twoMuonAccepted = false;
       bool threeMuonAccepted = false;
 
+      // turnon curve parameters
+      double oneMuonWeight = 0;
+      double twoMuonWeight = 0;
+      double threeMuonWeight = 0;
+
       // required due to compiler seeing unused but set variables as errors
-      if(twoBigEleAccepted || dileptonAccepted || oneMuonAccepted || twoMuonAccepted || threeMuonAccepted)
+      if(twoBigEleAccepted || dileptonAccepted || oneMuonAccepted || twoMuonAccepted || threeMuonAccepted || oneMuonWeight < twoMuonWeight || twoMuonWeight < threeMuonWeight)
       {
         twoBigEleAccepted = false;
       }
@@ -780,6 +809,46 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         {
           oneMuonAccepted = true;
         }
+        if(biggestLepPt < 5)
+        {
+          oneMuonWeight = 0.05;
+        }
+        else if(biggestLepPt >= 5 && biggestLepPt < 10)
+        {
+          oneMuonWeight = 0.27;
+        }
+        else if(biggestLepPt >= 10 && biggestLepPt < 15)
+        {
+          oneMuonWeight = 0.37;
+        }
+        else if(biggestLepPt >= 15 && biggestLepPt < 20)
+        {
+          oneMuonWeight = 0.45;
+        }
+        else if(biggestLepPt >= 20 && biggestLepPt < 25)
+        {
+          oneMuonWeight = 0.57;
+        }
+        else if(biggestLepPt >= 25 && biggestLepPt < 30)
+        {
+          oneMuonWeight = 0.7;
+        }
+        else if(biggestLepPt >= 30 && biggestLepPt < 35)
+        {
+          oneMuonWeight = .78;
+        }
+        else if(biggestLepPt >= 35 && biggestLepPt < 40)
+        {
+          oneMuonWeight = 0.85;
+        }
+        else if(biggestLepPt >= 40 && biggestLepPt < 50)
+        {
+          oneMuonWeight = 0.94;
+        }
+        else if(biggestLepPt >= 50)
+        {
+          oneMuonWeight = 0.98;
+        }
       }
       if(twoMuonTrigger)
       {
@@ -787,17 +856,57 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         {
           twoMuonAccepted = true;
         }
+        if(secondBiggestLepPt < 5)
+        {
+          twoMuonWeight = 0.1;
+        }
+        else if(secondBiggestLepPt >= 5 && secondBiggestLepPt < 10)
+        {
+          twoMuonWeight = 0.18;
+        }
+        else if(secondBiggestLepPt >= 10 && secondBiggestLepPt < 15)
+        {
+          twoMuonWeight = 0.29;
+        }
+        else if(secondBiggestLepPt >= 15 && secondBiggestLepPt < 20)
+        {
+          twoMuonWeight = 0.41;
+        }
+        else if(secondBiggestLepPt >= 20 && secondBiggestLepPt < 25)
+        {
+          twoMuonWeight = .6;
+        }
+        else if(secondBiggestLepPt >=25 && secondBiggestLepPt < 30)
+        {
+          twoMuonWeight = .85;
+        }
+        else if(secondBiggestLepPt >= 30)
+        {
+          twoMuonWeight = .95;
+        }
       }
       if(threeMuonTrigger)
       {
         if(biggestLepPt >= 10 && secondBiggestLepPt >= 5 && thirdBiggestLepPt >= 5)
         {
           threeMuonAccepted = true;
+          if(thirdBiggestLepPt < 5)
+          {
+            threeMuonWeight = 0.3;
+          }
+          else if(thirdBiggestLepPt <10 && thirdBiggestLepPt >=5)
+          {
+            threeMuonWeight = 0.8;
+          }
+          else if(thirdBiggestLepPt >=10)
+          {
+            threeMuonWeight = 0.9;
+          }
         }
       }
 
       // select which combination of triggers to use (don't forget to set the trigger selection above)
-      if(oneMuonAccepted)
+      if(oneMuonAccepted || twoMuonAccepted || threeMuonAccepted)
       {
         accepted = true;
       }
@@ -817,31 +926,124 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       
         if(biggestLepPt != 0)
         {
-          h_lepBiggestPTPasses->Fill(bigPTLep->pt());
+          h_lepBiggestPTPasses->Fill(bigPTLep->pt());//, oneMuonWeight);
         }
         if(secondBiggestLepPt != 0)
         {
-          h_lepSecondBiggestPTPasses->Fill(secondBigPTLep->pt());
+          h_lepSecondBiggestPTPasses->Fill(secondBigPTLep->pt());//, twoMuonWeight);
         }
         if(thirdBiggestLepPt != 0)
         {
-          h_lepThirdBiggestPTPasses->Fill(thirdBigPTLep->pt());
+          h_lepThirdBiggestPTPasses->Fill(thirdBigPTLep->pt());//, threeMuonWeight);
         }
-      }
-      for(int jet = 0; jet < recoJetNum; jet++)
-      {
-        h_recoLeptonJetCounter->Fill(1);
+      
+        for(int jet = 0; jet < recoJetNum; jet++)
+        {
+          h_recoLeptonJetCounter->Fill(1);
+        }
       }
     }
     else
     {
       std::cout << "No Leptons for this event" << std::endl;
     }
-  //}
+  }
   else
   {
     recoLeptons.clear();
   }
+
+  std::vector<const reco::Candidate*> lepsFromChi1;
+  std::vector<const reco::Candidate*> lepsFromChi2;
+
+  // comparing four vector of the lepton jet to the four vector of the neutralino
+  for(auto &lep : leptons)
+  {
+    const reco::Candidate* particleOfFocus =  lep;
+    const reco::Candidate* motherOfFocus = lep->mother();
+
+    int neutralinoPdgId = 1000022;
+    bool neutralinoNotFound = true;
+    while(neutralinoNotFound)
+    {
+      if(motherOfFocus->numberOfMothers() == 0)
+      {
+        neutralinoNotFound = false;
+      }
+      else if(motherOfFocus->pdgId() == neutralinoPdgId)
+      {
+        neutralinoNotFound = false;
+        if(motherOfFocus == chi1)
+        {
+          lepsFromChi1.push_back(lep);
+        }
+        else if(motherOfFocus == chi2)
+        {
+          lepsFromChi2.push_back(lep);
+        }
+        else
+        {
+          std::cout << "four vector matching algorithm found a nonmatching neutralino";
+        }
+      }
+      else
+      {
+        particleOfFocus = motherOfFocus;
+        motherOfFocus = particleOfFocus->mother();
+      }
+    }
+  }
+
+  // default constructor doesn't create a null vector, thus the following is performed to allow for a null vector
+  ROOT::Math::LorentzVector chi1LepSum = chi1->p4() - chi1->p4();
+  ROOT::Math::LorentzVector chi2LepSum = chi2->p4() - chi2->p4();
+  for(auto &leps : lepsFromChi1)
+  {
+    chi1LepSum += leps->p4();
+  }
+  for(auto &leps : lepsFromChi2)
+  {
+    chi2LepSum += leps->p4();
+  }
+
+  if(!lepsFromChi1.empty())
+  {
+    h_chiPt->Fill(chi1->p4().pt());
+    h_chiEta->Fill(chi1->p4().eta());
+    h_chiPhi->Fill(chi1->p4().phi());
+    h_chiMass->Fill(chi1->p4().mass());    
+
+    h_lepJetPt->Fill(chi1LepSum.pt());
+    h_lepJetEta->Fill(chi1LepSum.eta());
+    h_lepJetPhi->Fill(chi1LepSum.phi());
+    h_lepJetMass->Fill(chi1LepSum.mass());
+    
+    h_chiLepPtDiff->Fill(chi1->p4().pt() - chi1LepSum.pt());
+    h_chiLepEtaDiff->Fill(chi1->p4().eta() - chi1LepSum.eta());
+    h_chiLepPhiDiff->Fill(reco::deltaPhi(chi1->p4().phi(), chi1LepSum.phi()));
+    h_chiLepMassDiff->Fill(chi1->p4().mass() - chi1LepSum.mass());
+
+
+  }
+
+  if(!lepsFromChi2.empty())
+  {
+    h_chiPt->Fill(chi2->p4().pt());
+    h_chiEta->Fill(chi2->p4().eta());
+    h_chiPhi->Fill(chi2->p4().phi());
+    h_chiMass->Fill(chi2->p4().mass());
+
+    h_lepJetPt->Fill(chi2LepSum.pt());
+    h_lepJetEta->Fill(chi2LepSum.eta());
+    h_lepJetPhi->Fill(chi2LepSum.phi());
+    h_lepJetMass->Fill(chi2LepSum.mass());
+
+    h_chiLepPtDiff->Fill(chi2->p4().pt() - chi2LepSum.pt());
+    h_chiLepEtaDiff->Fill(chi2->p4().eta() - chi2LepSum.eta());
+    h_chiLepPhiDiff->Fill(reco::deltaPhi(chi2->p4().phi(), chi2LepSum.phi()));
+    h_chiLepMassDiff->Fill(chi2->p4().mass() - chi2LepSum.mass());
+  }
+
   //printGenParticleCollection(genParts);
 
   std::cout << "\n\n===========================================================================================================" << std::endl;
