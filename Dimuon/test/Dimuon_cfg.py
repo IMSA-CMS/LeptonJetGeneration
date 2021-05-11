@@ -22,8 +22,9 @@ process.source = cms.Source("PoolSource",
                                 #'file:/afs/cern.ch/work/s/szaleski/private/CMSSW_744_MCGen/src/GenStudy/Dimuon/test/CIToMuMu_M300_D0_L13000_8TeV_pythia8_GEN_17_Sep9.root',
 #                                'root://cmsxrootd.fnal.gov//store/user/szaleski/DYToMuMu/M200_13TeV_pythia8_GEN/150814_161922/0000/CIToMuMu_M0_D0_L1000_13TeV_pythia8_GEN_0_1.root',
  #                               'file:%s/DYToMuMu_M0_D200_13TeV_pythia8_GEN_25.root'%(filedir),
-                                 'file:/uscms/home/mhuang2/nobackup/pythia/CMSSW_10_6_4/src/GenStudy/Dimuon/test/CITo_PID13_M-1_D0_L1000_LL0_LR_0_RR_0_13TeV_pythia8_GEN.root'
-                                 #'file:/uscms/home/bwilliam/nobackup/LeptonJets/CMSSW_10_6_4/src/GenStudy/Dimuon/test/CITo_PID13_M-1_D100_L1000_LL0_LR_0_RR_0_13TeV_pythia8_GEN.root'
+                                 #'file:/uscms/home/mhuang2/nobackup/pythia/CMSSW_10_6_4/src/GenStudy/Dimuon/test/CITo_PID13_M-1_D0_L1000_LL0_LR_0_RR_0_13TeV_pythia8_GEN.root'
+                                 'file:/uscms/home/mhuang2/nobackup/pythia/CMSSW_10_6_4/src/GenStudy/Dimuon/test/pythiaOutput/darkPhotonMass0.4.root'
+                                 #'file:/uscms/home/bwilliam/nobackup/LeptonJets/CMSSW_10_6_4/src/GenStudy/Dimuon/test/CITo_PID13_M-1_D0_L1000_LL0_LR_0_RR_0_13TeV_pythia8_GEN.root'
                                 )
                             )
 
