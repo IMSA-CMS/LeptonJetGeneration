@@ -134,6 +134,47 @@ process.generator = cms.EDFilter("Pythia8GeneratorFilter",
                         'SLHA:readFrom = 2',
                         'SLHA:file = /uscms/home/hibarra/nobackup/softsusy/softsusy-4.1.12/inOutFiles/nmssmSLHAnoZ3Outputm0_300_m12_350',
                         #'print("There is no error here")', #could the error be here?
+                        #'SLHA:file = leptonJet.spc',
+
+
+                        '4900001:m0 = 6.5',
+                        '4900002:m0 = 0.1',
+                        '4900003:m0 = 4.5',
+                        '4900004:m0 = 2',
+
+                        '4900001:spinType = 1',
+                        '4900002:spinType = 1',
+                        '4900003:spinType = 1',
+                        '4900004:spinType = 2',
+
+                        '4900001:chargeType = 0',
+                        '4900002:chargeType = 0',
+                        '4900003:chargeType = 0',
+                        '4900004:chargeType = 0',
+
+                        '4900001:colType = 0',
+                        '4900002:colType = 0',
+                        '4900003:colType = 0',
+                        '4900004:colType = 0',
+
+                        '4900001:name = darkPseudoScalar',
+                        '4900002:name = darkLightHiggs',
+                        '4900003:name = darkHeavyHiggs',
+                        '4900004:name = darkFermion',
+
+                        '4900001:antiname = darkPseudoScalarBar',
+                        '4900002:antiname = darkLightHiggsBar',
+                        '4900003:antiname = darkHeavyHiggsBar',
+                        '4900004:antiname = darkFermionBar',
+
+                        '4900005:m0 = 1000000',
+                        '4900006:m0 = 1000000',
+                        '4900011:m0 = 1000000',
+                        '4900012:m0 = 1000000',
+                        '4900013:m0 = 1000000',
+                        '4900014:m0 = 1000000',
+                        '4900015:m0 = 1000000',
+                        '4900016:m0 = 1000000',
                         '4900021:m0 = 1000000',
                         '4900023:m0 = 1000000',
                         '4900101:m0 = 1000000',

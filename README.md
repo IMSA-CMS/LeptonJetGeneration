@@ -28,7 +28,7 @@ scram b -j 8
 If there are compiler errors, rsolve these (should be minor, if any).
 Upon successful build change to test directory and try running the genrator executable using cmsRun.
 This creates a lot screen output and can be time consuming to run so we redirect the output into a .txt file using '>' and run both functions in the background using '&'
-It does take command line input. Every option has a default value except for maxEvents...which defaults to infity!
+It does take command line input. Every option has a default value except for maxEvents...which defaults to infinity!
 YOU MUST ASSIGN A VALUE TO THIS VARIABLE EVERY TIME!!!
 If you forget, simply kill the process with "Ctrl+C"
 
