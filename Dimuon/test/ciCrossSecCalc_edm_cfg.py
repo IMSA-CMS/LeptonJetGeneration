@@ -1,4 +1,4 @@
-
+print("You just lost the game")
 import FWCore.ParameterSet.VarParsing as VarParsing
 options = VarParsing.VarParsing ('analysis')
 from mcCmdLineOptions_cfi import registerDefaultMCOptions
@@ -15,11 +15,11 @@ options.register ('interferenceMode',
                   "Z/gamma/Z' interference setting")
 options.parseArguments()
 
-
+print("Please let process be defined")
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process('GEN')
-
+print("I need to study for MVC")
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
@@ -81,79 +81,59 @@ process.generator = cms.EDFilter("Pythia8GeneratorFilter",
         PythiaParameters = cms.PSet(
                 processParameters = cms.vstring(
                         'Main:timesAllowErrors    = 10000',
-                        'ParticleDecays:limitTau0 = on',
-                        'ParticleDecays:tauMax = 10',
-                        'Tune:pp 5',
-                        'Tune:ee 3',
- 			#'WeakSingleBoson:ffbar2ffbar(s:gmZ)= %s'%(isDY),
-                        #'ContactInteractions:QCffbar2eebar = %s'%(isCIee),
-                        #'ContactInteractions:QCffbar2mumubar = %s'%(isCImumu),
-                        '23:onMode = off',
-                        '23:onIfAny = '+str(options.pdgId),
-			#'PartonLevel:MPI = '+str(options.ULE),
-			#'PartonLevel:ISR = '+str(options.ISR),
-			#'PartonLevel:FSR = '+str(options.FSR),
-                        'PartonLevel:MPI = off',
-                        'PartonLevel:ISR = off',
-                        'PartonLevel:FSR = off',
-                        # turn on for final
-			'PhaseSpace:pTHatMin = '+str(options.pTMin),
-                        'PhaseSpace:mHatMin = '+str(options.minMass),
-                        'PhaseSpace:mHatMax = '+str(options.maxMass),
-			'PhaseSpace:pTHatMax = '+str(options.pTMax),
-			#'ContactInteractions:etaLL = '+str(options.helicityLL),
-			#'ContactInteractions:etaLR = '+str(options.helicityLR),
-			#'ContactInteractions:etaRL = '+str(options.helicityRL),
-			#'ContactInteractions:etaRR = '+str(options.helicityRR),
-			#'ContactInteractions:Lambda = '+str(options.Lambda),
-                        'SUSY:all = on',
-                        #'HiddenValley:all = on',
-                        #'SUSY:qqbar2squarkantisquark = on',
-                        #'SUSY:idA = 1000006',
-                        'SLHA:readFrom = 2',
-                        'SLHA:file = sps1aWithDecays.spc',
-                        #'HiddenValley:all',
-                        'HadronLevel:all = off',
-
-                        '4900001:m0 = 6.5',
-                        '4900002:m0 = 0.1',
-                        '4900003:m0 = 4.5',
-                        '4900004:m0 = 2',
-
-                        '4900001:spinType = 1',
-                        '4900002:spinType = 1',
-                        '4900003:spinType = 1',
-                        '4900004:spinType = 2',
-
-                        '4900001:chargeType = 0',
-                        '4900002:chargeType = 0',
-                        '4900003:chargeType = 0',
-                        '4900004:chargeType = 0',
-
-                        '4900001:colType = 0',
-                        '4900002:colType = 0',
-                        '4900003:colType = 0',
-                        '4900004:colType = 0',
-
-                        '4900001:name = darkPseudoScalar',
-                        '4900002:name = darkLightHiggs',
-                        '4900003:name = darkHeavyHiggs',
-                        '4900004:name = darkFermion',
-
-                        '4900001:antiname = darkPseudoScalarBar',
-                        '4900002:antiname = darkLightHiggsBar',
-                        '4900003:antiname = darkHeavyHiggsBar',
-                        '4900004:antiname = darkFermionBar',
-
+                        # 'ParticleDecays:limitTau0 = on',
+                        # 'ParticleDecays:tauMax = 10',
+                        # 'Tune:pp 5',
+                        # 'Tune:ee 3',
+ 			# #'WeakSingleBoson:ffbar2ffbar(s:gmZ)= %s'%(isDY),
+                        # #'ContactInteractions:QCffbar2eebar = %s'%(isCIee),
+                        # #'ContactInteractions:QCffbar2mumubar = %s'%(isCImumu),
+                        # '23:onMode = off',
+                        # '23:onIfAny = '+str(options.pdgId),
+			# #'PartonLevel:MPI = '+str(options.ULE),
+			# #'PartonLevel:ISR = '+str(options.ISR),
+			# #'PartonLevel:FSR = '+str(options.FSR),
+                        # 'PartonLevel:MPI = off',
+                        # 'PartonLevel:ISR = off',
+                        # 'PartonLevel:FSR = off',
+                        # # turn on for final
+			# 'PhaseSpace:pTHatMin = '+str(options.pTMin),
+                        # 'PhaseSpace:mHatMin = '+str(options.minMass),
+                        # 'PhaseSpace:mHatMax = '+str(options.maxMass),
+			# 'PhaseSpace:pTHatMax = '+str(options.pTMax),
+			# #'ContactInteractions:etaLL = '+str(options.helicityLL),
+			# #'ContactInteractions:etaLR = '+str(options.helicityLR),
+			# #'ContactInteractions:etaRL = '+str(options.helicityRL),
+			# #'ContactInteractions:etaRR = '+str(options.helicityRR),
+			# #'ContactInteractions:Lambda = '+str(options.Lambda),
+                        # 'SUSY:all = on',
+                        # #'HiddenValley:all = on',
+                        # #'SUSY:qqbar2squarkantisquark = on',
+                        # #'SUSY:idA = 1000006',
+                        # 'SLHA:readFrom = 2',
 		
-                        '4900005:m0 = 1000000',
-                        '4900006:m0 = 1000000',
-                        '4900011:m0 = 1000000',
-                        '4900012:m0 = 1000000',
-                        '4900013:m0 = 1000000',
-                        '4900014:m0 = 1000000',
-                        '4900015:m0 = 1000000',
-                        '4900016:m0 = 1000000',
+                        # '4900022:mayDecay = true',
+                        # '1000022:mayDecay = true',
+                        # '4900002:mayDecay = off',
+                        # '4900004:mayDecay = off',
+                        # '4900022:m0 = 1',    
+                        # '4900022:0:meMode = 0', 		
+		
+                        # #'SLHA:minDecayDeltaM = 0.001',
+		
+                        # 'HiddenValley:Ngauge = 1',
+                        # 'HiddenValley:doKinMix = on',
+                        # 'HiddenValley:FSR = on',
+                        # 'HiddenValley:alphaFSR = 0.3'
+                         'Tune:pp 5',
+            'Tune:ee 3',
+            'PartonLevel:MPI = on',
+            'PartonLevel:ISR = on',
+            'PartonLevel:FSR = on',
+            'SUSY:all = on',
+                        'SLHA:readFrom = 2',
+                        'SLHA:file = /uscms/home/hibarra/nobackup/softsusy/softsusy-4.1.12/inOutFiles/nmssmSLHAnoZ3Outputm0_300_m12_350',
+                        #'print("There is no error here")', #could the error be here?
                         '4900021:m0 = 1000000',
                         '4900023:m0 = 1000000',
                         '4900101:m0 = 1000000',
@@ -161,30 +141,21 @@ process.generator = cms.EDFilter("Pythia8GeneratorFilter",
                         '4900113:m0 = 1000000',
                         '4900211:m0 = 1000000',
                         '4900213:m0 = 1000000',
-                        '4900991:m0 = 1000000',	
-		
-		
-		
-		
-		
+                        '4900991:m0 = 1000000',
+###Change ends here
                         '4900022:mayDecay = true',
                         '1000022:mayDecay = true',
                         '4900002:mayDecay = off',
                         '4900004:mayDecay = off',
-                        '4900022:m0 = 1',    
-                        '4900022:0:meMode = 0', 		
-		
-                        #'SLHA:minDecayDeltaM = 0.001',
-		
+                        '4900022:m0 = 0.3',
+                        '4900022:0:meMode = 0',
+
                         'HiddenValley:Ngauge = 1',
                         'HiddenValley:doKinMix = on',
                         'HiddenValley:FSR = on',
-                        'HiddenValley:alphaFSR = 0'
-		
-		
-		
-		
-                ),
+                        'HiddenValley:alphaFSR = 30'),
+                        #'print("there is no error here either")'), ##changing this from 0 to 30 didn't work
+                #print ("alphaFSR error not here")
                 parameterSets = cms.vstring('processParameters')
         )
 )
@@ -204,21 +175,10 @@ process.AODSIMoutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(15728640),
-    fileName =
-cms.untracked.string('file:CITo_PID%d_M%d_D%d_L%d_LL%d_LR_%d_RR_%d_13TeV_pythia8_GEN.root'%(options.pdgId,options.minMass,options.pTMin,options.Lambda,options.helicityLL,options.helicityLR,options.helicityRR)),
+    fileName = cms.untracked.string('file:output.root'),
     outputCommands = process.AODSIMEventContent.outputCommands
 )
-
 process.AODSIMoutput_step = cms.EndPath(process.AODSIMoutput)
-
-
-
-
-
-
-
-
-
 
 # Path and EndPath definitions
 process.generation_step = cms.Path(process.pgen)#*process.crossSecTreeMaker*process.pdfTreeMaker)
@@ -237,5 +197,3 @@ for path in process.paths:
 file = open('GenTest.txt','w')
 file.write(str(process.dumpPython()))
 file.close()
-
-

@@ -126,6 +126,8 @@ private:
   TH1F *h_noJetNeutralinoNum;
   TH1F *h_acceptedEventsNum;
 
+  TH1F *h_darkPhotonEta;
+
   P4Struct bosonP4_; // as a sanity check we have the right event...
   P4Struct muMinusP4_;
   P4Struct muPlusP4_;
@@ -157,6 +159,7 @@ void Dimuon::beginJob()
   // Dark photon histograms
   h_darkPhotonNum = fs->make<TH1F>("darkPhotonNum", "Amount of dark photons per event", 15, -.5, 14.5);
   h_darkPhotonPT = fs->make<TH1F>("darkPhotonPT", "Dark Photon PT", 100, 0, 400);
+  h_darkPhotonEta = fs->make<TH1F>("darkPhotonEta", "Dark Photon Eta", 100, -5, 5);
 
   // Electrons that came from a dark photon histograms
   h_eleFromGammavNum = fs->make<TH1F>("eleFromGammavNum", "Number of electrons from dark photons in each event", 14, 0, 14);
@@ -319,6 +322,7 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       {
 	      numDarkPhotons++;
 	      h_darkPhotonPT->Fill(part.pt()); // Enter pT into histogram
+        h_darkPhotonEta->Fill(part.eta());
     
         const reco::Candidate* daughter1; // Container for final state electrons
 	      const reco::Candidate* daughter2;
