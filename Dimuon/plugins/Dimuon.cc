@@ -106,6 +106,7 @@ private:
   TH1F *h_lepFromGammavNum, *h_lepFromGammavPT;
   TH1F *h_lepPhi, *h_lepEta, *h_lepR, *h_lepInvariantMass;
   TH1F *h_lepDeltaPhi, *h_lepDeltaEta;
+  TH1F *h_lepDeltaXY;
 
   // High pT electron histograms
   TH1F *h_30GevOrMoreLeptons;
@@ -144,6 +145,9 @@ private:
   double crossSec, cosTheta, tanPhi, csTheta, csPhi;
   double mCosThetaPlus, mCosThetaMinus;
 
+  int countXY;
+  int totalXY;
+
   int debug_;
   edm::InputTag genPartsTag_;
   int decayParticlePID_;
@@ -178,6 +182,7 @@ void Dimuon::beginJob()
   h_lepInvariantMass = fs->make<TH1F>("lepInvariantMass", "Invariant mass of leptons", 100, -0.5, 1.5);
   h_lepDeltaPhi = fs->make<TH1F>("lepDeltaPhi", "difference in phi between two leptons that came from the same dark photon", 100, -10, 10);
   h_lepDeltaEta = fs->make<TH1F>("lepDeltaEta", "delta eta of leptons from the same dark photon", 100, -10, 10);
+  h_lepDeltaXY = fs->make<TH1F>("lepDeltaXY", "distance from origin of leptons", 1000, 0, 10000);
   h_lepR = fs->make<TH1F>("lepR", "Distance between a pair of two leptons that originated from the same dark photon in phi-eta space", 300, -0.1, 2.9);
 
   // High pT electron histograms
@@ -235,6 +240,9 @@ void Dimuon::beginJob()
   h_chiMass = fs->make<TH1F>("chiMass", "The mass of all neutralinos in the event", 100, -100, 400);
   h_lepJetMass = fs->make<TH1F>("lepJetMass", "The mass of all lepton jets in the event", 100, -100, 400);
   h_chiLepMassDiff = fs->make<TH1F>("chiLepMassDiff", "The differnce in mass between all pairs of lepton jets and their neutralinos  in the event", 100, -100, 400);
+
+  countXY = 0;
+  totalXY = 0;
 
   tree_= fs->make<TTree>("pdfTree","PDF Tree");
   // tree_->Branch("evtId",&evtId_,EventId::contents().c_str());
@@ -431,9 +439,17 @@ Dimuon::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 	        double deltaEta = daughter2->eta()-daughter1->eta(); // Filling delta eta and delta r between the two leptons
 	        double deltaPhi = reco::deltaPhi(daughter2->phi(), daughter1->phi());
+          double deltaXY = (sqrt(daughter1->vx() * daughter1->vx() + daughter1->vy() * daughter1->vy())
+              + sqrt(daughter2->vx() * daughter2->vx() + daughter2->vy() * daughter2->vy())) / 2;
+
+          if(deltaXY <= 2) {
+            countXY++;
+          }
+          totalXY++;
 	  
 	        h_lepDeltaPhi->Fill(deltaPhi);
 	        h_lepDeltaEta->Fill(deltaEta);
+          h_lepDeltaXY->Fill(deltaXY);
 
 	        ROOT::Math::LorentzVector d1 = daughter1->p4(); // Filing delta r between the two leptons
 	        ROOT::Math::LorentzVector d2 = daughter2->p4();
@@ -1335,6 +1351,9 @@ void
   iRun.getByToken(genInfoProductToken_, genInfoProduct );
   crossSec = genInfoProduct->internalXSec().value();
   std::cout<< "Cross Section is: "  << crossSec << std::endl;  
+
+  double d = (double)countXY/(double)totalXY;
+  std::cout<< d << std::endl;
  
   }
 
