@@ -18,6 +18,8 @@
 !*ciCrossSecCalc_edm_cfg.py
 !*compareOptions_cfi.py
 !*Dimuon_cfi.py
+!*HiggsPortal_cfg.py
+!*HiggsPortal_cfi.py
 !*dyCrossSecCalc_edm_cfg.py
 !*genTreeTools_cfg.py
 !*crabConfig_Dimuon_Hist.py
